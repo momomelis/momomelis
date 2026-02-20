@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Momo Candie – Drawing Tool</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #1a0a2e;
+      color: #f0e6ff;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      margin-bottom: 12px;
+      background: linear-gradient(90deg, #ff79c6, #bd93f9, #8be9fd);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    #toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: center;
+      background: #2d1b4e;
+      padding: 10px 16px;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      width: 100%;
+      max-width: 860px;
+    }
+
+    .tool-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    label { font-size: 0.8rem; color: #bd93f9; }
+
+    input[type="color"] {
+      width: 36px;
+      height: 36px;
+      border: 2px solid #6272a4;
+      border-radius: 50%;
+      padding: 2px;
+      background: none;
+      cursor: pointer;
+    }
+
+    input[type="range"] {
+      accent-color: #bd93f9;
+      cursor: pointer;
+    }
+
+    select {
+      background: #1a0a2e;
+      color: #f0e6ff;
+      border: 1px solid #6272a4;
+      border-radius: 6px;
+      padding: 4px 8px;
+      cursor: pointer;
+    }
+
+    button {
+      background: #44475a;
+      color: #f0e6ff;
+      border: none;
+      border-radius: 8px;
+      padding: 6px 14px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: background 0.15s;
+    }
+
+    button:hover { background: #6272a4; }
+    button.active { background: #bd93f9; color: #1a0a2e; font-weight: 600; }
+
+    #canvas {
+      border-radius: 12px;
+      box-shadow: 0 0 30px #bd93f944;
+      cursor: crosshair;
+      touch-action: none;
+      background: #ffffff;
+      max-width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <h1>Momo Candie – Drawing Tool</h1>
+
+  <div id="toolbar">
+    <div class="tool-group">
+      <label>Color</label>
+      <input type="color" id="colorPicker" value="#bd93f9" />
+    </div>
+
+    <div class="tool-group">
+      <label>Size</label>
+      <input type="range" id="brushSize" min="1" max="60" value="8" />
+    </div>
+
+    <div class="tool-group">
+      <label>Brush</label>
+      <select id="brushType">
+        <option value="round">Round</option>
+        <option value="spray">Spray</option>
+        <option value="star">Star</option>
+        <option value="rainbow">Rainbow</option>
+      </select>
+    </div>
+
+    <div class="tool-group">
+      <label>Opacity</label>
+      <input type="range" id="opacity" min="5" max="100" value="100" />
+    </div>
+
+    <button id="eraserBtn">Eraser</button>
+    <button id="clearBtn">Clear</button>
+    <button id="saveBtn">Save PNG</button>
+  </div>
+
+  <canvas id="canvas" width="840" height="600"></canvas>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const colorPicker = document.getElementById('colorPicker');
+    const brushSize = document.getElementById('brushSize');
+    const brushType = document.getElementById('brushType');
+    const opacitySlider = document.getElementById('opacity');
+    const eraserBtn = document.getElementById('eraserBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const saveBtn = document.getElementById('saveBtn');
+
+    let drawing = false;
+    let lastX = 0;
+    let lastY = 0;
+    let erasing = false;
+    let rainbowHue = 0;
+
+    function getPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      if (e.touches) {
+        return {
+          x: (e.touches[0].clientX - rect.left) * scaleX,
+          y: (e.touches[0].clientY - rect.top) * scaleY,
+        };
+      }
+      return {
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY,
+      };
+    }
+
+    function drawStroke(x, y) {
+      const size = parseInt(brushSize.value);
+      const alpha = parseInt(opacitySlider.value) / 100;
+      const color = erasing ? '#ffffff' : colorPicker.value;
+      const type = erasing ? 'round' : brushType.value;
+
+      ctx.globalAlpha = alpha;
+
+      if (type === 'round') {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = size;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+
+      } else if (type === 'spray') {
+        ctx.fillStyle = color;
+        const density = size * 3;
+        for (let i = 0; i < density; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const radius = Math.random() * size;
+          ctx.beginPath();
+          ctx.arc(
+            x + Math.cos(angle) * radius,
+            y + Math.sin(angle) * radius,
+            0.8, 0, Math.PI * 2
+          );
+          ctx.fill();
+        }
+
+      } else if (type === 'star') {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = Math.max(1, size / 8);
+        const spikes = 5;
+        const outer = size;
+        const inner = size / 2.5;
+        ctx.beginPath();
+        for (let i = 0; i < spikes * 2; i++) {
+          const r = i % 2 === 0 ? outer : inner;
+          const angle = (i * Math.PI) / spikes - Math.PI / 2;
+          i === 0
+            ? ctx.moveTo(x + Math.cos(angle) * r, y + Math.sin(angle) * r)
+            : ctx.lineTo(x + Math.cos(angle) * r, y + Math.sin(angle) * r);
+        }
+        ctx.closePath();
+        ctx.stroke();
+
+      } else if (type === 'rainbow') {
+        rainbowHue = (rainbowHue + 3) % 360;
+        ctx.strokeStyle = `hsl(${rainbowHue}, 100%, 60%)`;
+        ctx.lineWidth = size;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+      }
+
+      ctx.globalAlpha = 1;
+    }
+
+    function startDraw(e) {
+      e.preventDefault();
+      drawing = true;
+      const { x, y } = getPos(e);
+      lastX = x;
+      lastY = y;
+    }
+
+    function draw(e) {
+      if (!drawing) return;
+      e.preventDefault();
+      const { x, y } = getPos(e);
+      drawStroke(x, y);
+      lastX = x;
+      lastY = y;
+    }
+
+    function stopDraw() { drawing = false; }
+
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDraw);
+    canvas.addEventListener('mouseleave', stopDraw);
+    canvas.addEventListener('touchstart', startDraw, { passive: false });
+    canvas.addEventListener('touchmove', draw, { passive: false });
+    canvas.addEventListener('touchend', stopDraw);
+
+    eraserBtn.addEventListener('click', () => {
+      erasing = !erasing;
+      eraserBtn.classList.toggle('active', erasing);
+    });
+
+    clearBtn.addEventListener('click', () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    });
+
+    saveBtn.addEventListener('click', () => {
+      const link = document.createElement('a');
+      link.download = 'momo-candie-art.png';
+      link.href = canvas.toDataURL();
+      link.click();
+    });
+
+    // Fill white background on load
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  </script>
+</body>
+</html>
