@@ -244,7 +244,7 @@ describe("MomoCandieNFT", function () {
     it("reverts with quantity above 3", async function () {
       await expect(
         nft.connect(addr1).publicMint(4, { value: publicPrice * 4n })
-      ).to.be.revertedWith("Invalid quantity");
+      ).to.be.revertedWith("Exceeds wallet limit");
     });
 
     it("reverts with insufficient payment", async function () {

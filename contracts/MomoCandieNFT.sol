@@ -199,7 +199,7 @@ contract MomoCandieNFT is ERC721Enumerable, Ownable, ReentrancyGuard {
         nonReentrant
     {
         require(salePhase == Phase.Public, "Public sale not active");
-        require(quantity > 0 && quantity <= MAX_PER_WALLET, "Invalid quantity");
+        require(quantity > 0, "Invalid quantity");
         uint256 totalMinted = _totalMinted(msg.sender);
         require(totalMinted + quantity <= MAX_PER_WALLET, "Exceeds wallet limit");
         require(totalSupply() + quantity <= MAX_SUPPLY - (RESERVE_SUPPLY - _reserveMinted), "Exceeds max supply");
