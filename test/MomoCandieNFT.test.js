@@ -197,6 +197,24 @@ describe("MomoCandieNFT", function () {
       await nft.toggleSale();
     });
 
+    it("enforces MAX_PER_WALLET across presale and public phases", async function () {
+      await nft.openPresale();
+      const proof = proofFor(addr1);
+      const presalePrice = ethers.parseEther("0.03");
+      await nft
+        .connect(addr1)
+        .presaleMint(2, proof, { value: presalePrice * 2n });
+
+      await nft.toggleSale();
+      const publicPrice = ethers.parseEther("0.05");
+      await expect(
+        nft.connect(addr1).publicMint(2, { value: publicPrice * 2n })
+      ).to.be.revertedWith("Exceeds wallet limit");
+
+      await nft.connect(addr1).publicMint(1, { value: publicPrice });
+      expect(await nft.balanceOf(addr1.address)).to.equal(3);
+    });
+
     it("any address can mint during public sale", async function () {
       await expect(
         nft.connect(notWhitelisted).publicMint(1, { value: publicPrice })
