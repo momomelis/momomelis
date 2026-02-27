@@ -1,0 +1,52 @@
+# .github/auto_assign.yml
+# Auto-assigns reviewers and owners on every PR opened in momo-intel-matrix.
+# This is the routing matrix. Signal in → hands notified → ritual begins.
+
+# ── ASSIGNEES ──────────────────────────────────────────────────────────────
+# The one who owns the session. Always you.
+addAssignees: author
+# "author" = whoever opens the PR gets auto-assigned.
+# Swap for a username list if collaborators enter the chamber later.
+
+# ── REVIEWERS ──────────────────────────────────────────────────────────────
+# Reviewers called to witness the changeset.
+addReviewers: true
+
+reviewers:
+  - momomelis
+
+# ── NUMBER OF REVIEWERS ────────────────────────────────────────────────────
+# How many reviewers to summon per PR.
+# 1 = solo ritual. Scale up when the DAO contributors arrive.
+numberOfReviewers: 1
+
+# ── PATH-SPECIFIC ROUTING ──────────────────────────────────────────────────
+# Different paths invoke different reviewers.
+# Like sending kick to sub channel, pads to reverb return — intentional routing.
+
+useReviewGroups: true
+
+reviewGroups:
+  contracts:
+    - momomelis
+    # Future: add your auditor or trusted DAO co-signer here
+  scripts:
+    - momomelis
+  tests:
+    - momomelis
+
+# ── PATH FILTERS ───────────────────────────────────────────────────────────
+filterFilesForReview: true
+
+filePatterns:
+  contracts:
+    - "contracts/**/*.sol"
+  scripts:
+    - "scripts/**/*.js"
+  tests:
+    - "test/**/*.js"
+
+# ── SKIP CONDITIONS ────────────────────────────────────────────────────────
+# Draft PRs are sketches — don't trigger the full review chain yet.
+# Like a rough bounce. Not ready for mastering.
+skipDraftPr: true
