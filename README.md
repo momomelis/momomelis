@@ -64,3 +64,44 @@ Femtech · DeFi · Music Production · Mythological Storytelling
 
 📫 [your link here]
 🌐 [momo-candie.com](https://momo-candie.com)
+
+---
+
+## Contributing
+
+All commit messages must follow the [Conventional Commits](https://www.conventionalcommits.org/) format, enforced automatically via [commitlint](https://commitlint.js.org/) + [husky](https://typicode.github.io/husky/).
+
+**Format:**
+
+```
+<type>(<optional scope>): <short description>
+```
+
+**Valid types:**
+
+| Type       | When to use                                      |
+|------------|--------------------------------------------------|
+| `feat`     | A new feature                                    |
+| `fix`      | A bug fix                                        |
+| `docs`     | Documentation changes only                       |
+| `style`    | Formatting, missing semi-colons, etc. (no logic) |
+| `refactor` | Code change that is neither a fix nor a feature  |
+| `test`     | Adding or updating tests                         |
+| `chore`    | Build process, dependency updates, tooling       |
+
+**Examples:**
+
+```
+feat: add presale merkle proof validation
+fix: correct reserve supply cap check
+docs: update deployment instructions
+chore: bump openzeppelin to v5.4
+```
+
+Commit messages that do not match this pattern are rejected at commit time with a clear error message.
+
+**Setup:**
+
+```sh
+npm install   # also runs `husky` to install the git hooks
+```
