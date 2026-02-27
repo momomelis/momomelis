@@ -178,6 +178,8 @@ contract MomoCandieNFT is ERC721Enumerable, Ownable, ReentrancyGuard {
     {
         require(salePhase == Phase.Presale, "Presale not active");
         require(_verifyWhitelist(msg.sender, proof), "Not whitelisted");
+        uint256 totalMinted = _totalMinted(msg.sender);
+        require(totalMinted + quantity <= MAX_PER_WALLET, "Exceeds wallet limit");
         require(presaleMintedCount[msg.sender] + quantity <= MAX_PRESALE_MINT, "Exceeds presale limit");
         require(totalSupply() + quantity <= MAX_SUPPLY - (RESERVE_SUPPLY - _reserveMinted), "Exceeds max supply");
         require(msg.value >= presalePrice * quantity, "Insufficient payment");
@@ -197,8 +199,9 @@ contract MomoCandieNFT is ERC721Enumerable, Ownable, ReentrancyGuard {
         nonReentrant
     {
         require(salePhase == Phase.Public, "Public sale not active");
-        require(quantity > 0 && quantity <= MAX_PER_WALLET, "Invalid quantity");
-        require(publicMintedCount[msg.sender] + quantity <= MAX_PER_WALLET, "Exceeds wallet limit");
+        require(quantity > 0, "Invalid quantity");
+        uint256 totalMinted = _totalMinted(msg.sender);
+        require(totalMinted + quantity <= MAX_PER_WALLET, "Exceeds wallet limit");
         require(totalSupply() + quantity <= MAX_SUPPLY - (RESERVE_SUPPLY - _reserveMinted), "Exceeds max supply");
         require(msg.value >= publicPrice * quantity, "Insufficient payment");
 
@@ -229,6 +232,10 @@ contract MomoCandieNFT is ERC721Enumerable, Ownable, ReentrancyGuard {
         for (uint256 i = 0; i < quantity; i++) {
             _safeMint(to, start + i);
         }
+    }
+
+    function _totalMinted(address wallet) internal view returns (uint256) {
+        return presaleMintedCount[wallet] + publicMintedCount[wallet];
     }
 
     function _verifyWhitelist(address account, bytes32[] calldata proof)
