@@ -13,6 +13,18 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "overrides": {
+    "serialize-javascript": "7.0.3",
+    "cookie": "1.0.2",
+    "tmp": "0.2.5",
+    "lodash": "4.17.23",
+    "ethjs-unit": {
+      "bn.js": "4.12.3"
+    },
+    "number-to-bn": {
+      "bn.js": "4.12.3"
+    }
+  },
   "devDependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^2.1.0",
     "@nomicfoundation/hardhat-ethers": "^3.1.3",
