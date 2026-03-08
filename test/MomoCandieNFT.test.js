@@ -449,4 +449,107 @@ describe("MomoCandieNFT", function () {
       ).to.be.revertedWith("Insufficient payment");
     });
   });
+
+  // ── CAMEO unit wallet registry ─────────────────────────────────────────────
+
+  describe("CAMEO unit wallet registry", function () {
+    // Unit enum values matching the contract (0–6)
+    const Unit = {
+      TREASURY_PRIME: 0,
+      GOV_SIGNAL:     1,
+      SQUADS_WATCH:   2,
+      JLP_DREAMER:    3,
+      SYRUP_FLOW:     4,
+      WHITE_NOISE:    5,
+      ORACLE_CORE:    6,
+    };
+
+    it("UNIT_COUNT is 7", async function () {
+      expect(await nft.UNIT_COUNT()).to.equal(7);
+    });
+
+    it("unit wallets default to zero address", async function () {
+      for (const unitId of Object.values(Unit)) {
+        expect(await nft.unitWallets(unitId)).to.equal(ethers.ZeroAddress);
+      }
+    });
+
+    it("owner can register a unit wallet and emits UnitWalletSet", async function () {
+      await expect(nft.setUnitWallet(Unit.TREASURY_PRIME, addr1.address))
+        .to.emit(nft, "UnitWalletSet")
+        .withArgs(Unit.TREASURY_PRIME, addr1.address);
+      expect(await nft.unitWallets(Unit.TREASURY_PRIME)).to.equal(addr1.address);
+    });
+
+    it("owner can register all seven unit wallets", async function () {
+      const wallets = [owner, dao, addr1, addr2, addr3, notWhitelisted, addr1];
+      for (const [unitId, wallet] of Object.values(Unit).map((id, i) => [id, wallets[i]])) {
+        await nft.setUnitWallet(unitId, wallet.address);
+        expect(await nft.unitWallets(unitId)).to.equal(wallet.address);
+      }
+    });
+
+    it("reverts setUnitWallet with zero address", async function () {
+      await expect(
+        nft.setUnitWallet(Unit.GOV_SIGNAL, ethers.ZeroAddress)
+      ).to.be.revertedWith("Zero address");
+    });
+
+    it("non-owner cannot set a unit wallet", async function () {
+      await expect(
+        nft.connect(addr1).setUnitWallet(Unit.WHITE_NOISE, addr1.address)
+      ).to.be.reverted;
+    });
+
+    it("owner can update (overwrite) a unit wallet", async function () {
+      await nft.setUnitWallet(Unit.ORACLE_CORE, addr1.address);
+      await nft.setUnitWallet(Unit.ORACLE_CORE, addr2.address);
+      expect(await nft.unitWallets(Unit.ORACLE_CORE)).to.equal(addr2.address);
+    });
+
+    describe("withdrawToUnit", function () {
+      const publicPrice = ethers.parseEther("0.05");
+
+      beforeEach(async function () {
+        await nft.toggleSale();
+        await nft.connect(addr1).publicMint(1, { value: publicPrice });
+      });
+
+      it("owner can withdraw to a registered unit wallet", async function () {
+        await nft.setUnitWallet(Unit.SYRUP_FLOW, addr3.address);
+        const balance = await ethers.provider.getBalance(await nft.getAddress());
+        await expect(nft.withdrawToUnit(Unit.SYRUP_FLOW))
+          .to.changeEtherBalance(addr3, balance);
+      });
+
+      it("withdrawToUnit emits Withdrawal event", async function () {
+        await nft.setUnitWallet(Unit.JLP_DREAMER, addr2.address);
+        const balance = await ethers.provider.getBalance(await nft.getAddress());
+        await expect(nft.withdrawToUnit(Unit.JLP_DREAMER))
+          .to.emit(nft, "Withdrawal")
+          .withArgs(addr2.address, balance);
+      });
+
+      it("reverts when unit wallet is not set", async function () {
+        await expect(
+          nft.withdrawToUnit(Unit.SQUADS_WATCH)
+        ).to.be.revertedWith("Unit wallet not set");
+      });
+
+      it("reverts when contract balance is zero", async function () {
+        await nft.setUnitWallet(Unit.WHITE_NOISE, addr3.address);
+        await nft.withdraw(); // drain the balance first
+        await expect(
+          nft.withdrawToUnit(Unit.WHITE_NOISE)
+        ).to.be.revertedWith("Nothing to withdraw");
+      });
+
+      it("non-owner cannot withdrawToUnit", async function () {
+        await nft.setUnitWallet(Unit.TREASURY_PRIME, addr3.address);
+        await expect(
+          nft.connect(addr1).withdrawToUnit(Unit.TREASURY_PRIME)
+        ).to.be.reverted;
+      });
+    });
+  });
 });

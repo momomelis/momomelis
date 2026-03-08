@@ -30,6 +30,23 @@ contract MomoCandieNFT is ERC721Enumerable, Ownable, ReentrancyGuard {
     uint256 public publicPrice  = 0.05 ether;
 
     // ─────────────────────────────────────────────────────────────────────────
+    //  CAMEO Sequence – Unit series 00–06 (Strawberry Protocol)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// @notice The seven wallet nodes of the MOMO CANDIE DAO architecture.
+    enum Unit {
+        TREASURY_PRIME,  // 00 – DAO Treasury           (TR3ASURY-PR1M3)
+        GOV_SIGNAL,      // 01 – Governance Wallet       (G0V-S1GN4L)
+        SQUADS_WATCH,    // 02 – Multi-sig Execution     (SQU4DS-W4TCH)
+        JLP_DREAMER,     // 03 – Yield Farming Position  (JLP-DREAM3R)
+        SYRUP_FLOW,      // 04 – Lending Position        (SYR-UP-FL0W)
+        WHITE_NOISE,     // 05 – Community Rewards       (WH1T3-N01SE-000)
+        ORACLE_CORE      // 06 – Oracle Layer            (0R4CLE-C0R3)
+    }
+
+    uint256 public constant UNIT_COUNT = 7;
+
+    // ─────────────────────────────────────────────────────────────────────────
     //  State
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -44,6 +61,9 @@ contract MomoCandieNFT is ERC721Enumerable, Ownable, ReentrancyGuard {
     string  public  unrevealedURI;
 
     address public daoMultisig;
+
+    /// @notice Registered wallet address for each CAMEO unit (00–06).
+    mapping(Unit => address) public unitWallets;
 
     uint256 private _reserveMinted;
 
@@ -60,6 +80,7 @@ contract MomoCandieNFT is ERC721Enumerable, Ownable, ReentrancyGuard {
     event DAOHandoff(address indexed previousOwner, address indexed daoMultisig);
     event MerkleRootUpdated(bytes32 newRoot);
     event Withdrawal(address indexed to, uint256 amount);
+    event UnitWalletSet(Unit indexed unit, address indexed wallet);
 
     // ─────────────────────────────────────────────────────────────────────────
     //  Constructor
@@ -145,6 +166,21 @@ contract MomoCandieNFT is ERC721Enumerable, Ownable, ReentrancyGuard {
     function setDAOMultisig(address _dao) external onlyOwner {
         require(_dao != address(0), "Zero address");
         daoMultisig = _dao;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  Admin – CAMEO unit wallet registry
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * @notice Register a wallet address for a CAMEO unit (00–06).
+     * @param unit    The unit identifier (0 = TREASURY_PRIME … 6 = ORACLE_CORE).
+     * @param wallet  The wallet address to associate with this unit.
+     */
+    function setUnitWallet(Unit unit, address wallet) external onlyOwner {
+        require(wallet != address(0), "Zero address");
+        unitWallets[unit] = wallet;
+        emit UnitWalletSet(unit, wallet);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -274,6 +310,20 @@ contract MomoCandieNFT is ERC721Enumerable, Ownable, ReentrancyGuard {
         (bool ok, ) = payable(daoMultisig).call{value: balance}("");
         require(ok, "Withdrawal failed");
         emit Withdrawal(daoMultisig, balance);
+    }
+
+    /**
+     * @notice Withdraw the full contract balance to a registered CAMEO unit wallet.
+     * @param unit  The unit identifier (0 = TREASURY_PRIME … 6 = ORACLE_CORE).
+     */
+    function withdrawToUnit(Unit unit) external onlyOwner nonReentrant {
+        address recipient = unitWallets[unit];
+        require(recipient != address(0), "Unit wallet not set");
+        uint256 balance = address(this).balance;
+        require(balance > 0, "Nothing to withdraw");
+        (bool ok, ) = payable(recipient).call{value: balance}("");
+        require(ok, "Withdrawal failed");
+        emit Withdrawal(recipient, balance);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
