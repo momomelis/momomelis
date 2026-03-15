@@ -2,7 +2,6 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
@@ -14,7 +13,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
  *         Supports presale (merkle-whitelist), public sale, reserve mint,
  *         metadata reveal, and DAO governance handoff.
  */
-contract MomoCandieNFT is ERC721Enumerable, Ownable, ReentrancyGuard {
+contract MomoCandieNFT is ERC721, Ownable, ReentrancyGuard {
     using Strings for uint256;
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -46,6 +45,7 @@ contract MomoCandieNFT is ERC721Enumerable, Ownable, ReentrancyGuard {
     address public daoMultisig;
 
     uint256 private _reserveMinted;
+    uint256 private _totalSupply;
 
     // track per-wallet mints per phase to enforce caps
     mapping(address => uint256) public presaleMintedCount;
@@ -179,7 +179,7 @@ contract MomoCandieNFT is ERC721Enumerable, Ownable, ReentrancyGuard {
         require(salePhase == Phase.Presale, "Presale not active");
         require(_verifyWhitelist(msg.sender, proof), "Not whitelisted");
         require(presaleMintedCount[msg.sender] + quantity <= MAX_PRESALE_MINT, "Exceeds presale limit");
-        require(totalSupply() + quantity <= MAX_SUPPLY - (RESERVE_SUPPLY - _reserveMinted), "Exceeds max supply");
+        require(totalSupply() + quantity <= _availableSupply(), "Exceeds max supply");
         require(msg.value >= presalePrice * quantity, "Insufficient payment");
 
         presaleMintedCount[msg.sender] += quantity;
@@ -199,7 +199,7 @@ contract MomoCandieNFT is ERC721Enumerable, Ownable, ReentrancyGuard {
         require(salePhase == Phase.Public, "Public sale not active");
         require(quantity > 0 && quantity <= MAX_PER_WALLET, "Invalid quantity");
         require(publicMintedCount[msg.sender] + quantity <= MAX_PER_WALLET, "Exceeds wallet limit");
-        require(totalSupply() + quantity <= MAX_SUPPLY - (RESERVE_SUPPLY - _reserveMinted), "Exceeds max supply");
+        require(totalSupply() + quantity <= _availableSupply(), "Exceeds max supply");
         require(msg.value >= publicPrice * quantity, "Insufficient payment");
 
         publicMintedCount[msg.sender] += quantity;
@@ -225,10 +225,30 @@ contract MomoCandieNFT is ERC721Enumerable, Ownable, ReentrancyGuard {
     // ─────────────────────────────────────────────────────────────────────────
 
     function _mintBatch(address to, uint256 quantity) internal {
-        uint256 start = totalSupply() + 1; // 1-indexed token IDs
+        uint256 start = totalSupply() + 1; // 1-indexed; snapshot before any mints in this batch
         for (uint256 i = 0; i < quantity; i++) {
             _safeMint(to, start + i);
         }
+    }
+
+    /// @dev Keeps `_totalSupply` in sync with every mint and burn.
+    function _update(address to, uint256 tokenId, address auth)
+        internal
+        override
+        returns (address)
+    {
+        address from = super._update(to, tokenId, auth);
+        if (from == address(0)) {
+            ++_totalSupply;
+        } else if (to == address(0)) {
+            --_totalSupply;
+        }
+        return from;
+    }
+
+    /// @dev Returns the effective public supply cap, accounting for unminted reserve tokens.
+    function _availableSupply() internal view returns (uint256) {
+        return MAX_SUPPLY - (RESERVE_SUPPLY - _reserveMinted);
     }
 
     function _verifyWhitelist(address account, bytes32[] calldata proof)
@@ -263,9 +283,10 @@ contract MomoCandieNFT is ERC721Enumerable, Ownable, ReentrancyGuard {
     function withdraw() external onlyOwner nonReentrant {
         uint256 balance = address(this).balance;
         require(balance > 0, "Nothing to withdraw");
-        (bool ok, ) = payable(owner()).call{value: balance}("");
+        address payable recipient = payable(owner());
+        (bool ok, ) = recipient.call{value: balance}("");
         require(ok, "Withdrawal failed");
-        emit Withdrawal(owner(), balance);
+        emit Withdrawal(recipient, balance);
     }
 
     function withdrawToDAO() external onlyOwner nonReentrant {
@@ -282,6 +303,10 @@ contract MomoCandieNFT is ERC721Enumerable, Ownable, ReentrancyGuard {
 
     function reserveMinted() external view returns (uint256) {
         return _reserveMinted;
+    }
+
+    function totalSupply() public view returns (uint256) {
+        return _totalSupply;
     }
 
     function remainingSupply() external view returns (uint256) {

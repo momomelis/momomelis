@@ -424,6 +424,36 @@ describe("MomoCandieNFT", function () {
     it("MAX_PER_WALLET is 3", async function () {
       expect(await nft.MAX_PER_WALLET()).to.equal(3);
     });
+
+    it("totalSupply starts at zero", async function () {
+      expect(await nft.totalSupply()).to.equal(0);
+    });
+
+    it("totalSupply increases correctly after mixed mints", async function () {
+      // reserve mint
+      await nft.reserveMint(owner.address, 3);
+      expect(await nft.totalSupply()).to.equal(3);
+
+      // presale mint
+      await nft.openPresale();
+      const proof = proofFor(addr1);
+      const presalePrice = ethers.parseEther("0.03");
+      await nft.connect(addr1).presaleMint(2, proof, { value: presalePrice * 2n });
+      expect(await nft.totalSupply()).to.equal(5);
+
+      // public mint
+      await nft.toggleSale();
+      const publicPrice = ethers.parseEther("0.05");
+      await nft.connect(addr2).publicMint(1, { value: publicPrice });
+      expect(await nft.totalSupply()).to.equal(6);
+    });
+
+    it("totalSupply and remainingSupply are always consistent", async function () {
+      await nft.reserveMint(owner.address, 10);
+      const supply = await nft.totalSupply();
+      const remaining = await nft.remainingSupply();
+      expect(supply + remaining).to.equal(await nft.MAX_SUPPLY());
+    });
   });
 
   // ── Price updates ──────────────────────────────────────────────────────────
