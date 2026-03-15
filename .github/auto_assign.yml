@@ -1,0 +1,13 @@
+# Auto-assign reviewers based on changed file paths
+addReviewers: true
+addAssignees: false
+
+skipDraftPr: true
+
+fileReviewers:
+  - 'contracts/**/*.sol':
+      - momomelis
+  - 'scripts/**/*.js':
+      - momomelis
+  - 'test/**/*.js':
+      - momomelis
