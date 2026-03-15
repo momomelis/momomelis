@@ -84,6 +84,10 @@ describe("MomoCandieNFT", function () {
         Factory.deploy(UNREVEALED_URI, merkleRoot, ethers.ZeroAddress)
       ).to.be.revertedWith("DAO multisig cannot be zero address");
     });
+
+    it("starts unpaused", async function () {
+      expect(await nft.paused()).to.be.false;
+    });
   });
 
   // ── Phase control ──────────────────────────────────────────────────────────
@@ -386,7 +390,7 @@ describe("MomoCandieNFT", function () {
     });
   });
 
-  // ── Merkle root admin ──────────────────────────────────────────────────────
+  // ── Merkle root update ─────────────────────────────────────────────────────
 
   describe("Merkle root update", function () {
     it("owner can update merkle root", async function () {
@@ -403,14 +407,33 @@ describe("MomoCandieNFT", function () {
     });
   });
 
-  // ── Supply & view functions ────────────────────────────────────────────────
+  // ── Supply and view functions ──────────────────────────────────────────────
 
   describe("Supply and view functions", function () {
-    it("remainingSupply decreases with mints", async function () {
+    // L-4: remainingSupply() now returns _availableSupply() — the number of
+    // tokens public/presale can still claim, not the raw MAX_SUPPLY remainder.
+
+    it("initial remainingSupply equals MAX_SUPPLY minus RESERVE_SUPPLY", async function () {
+      // All 111 reserve slots are "set aside" from the start.
+      expect(await nft.remainingSupply()).to.equal(3333 - 111);
+    });
+
+    it("remainingSupply decreases when public/presale tokens are minted", async function () {
+      const before = await nft.remainingSupply();
+      await nft.toggleSale();
+      const publicPrice = ethers.parseEther("0.05");
+      await nft.connect(addr1).publicMint(3, { value: publicPrice * 3n });
+      const after = await nft.remainingSupply();
+      expect(before - after).to.equal(3n);
+    });
+
+    it("remainingSupply is unaffected by reserve minting", async function () {
+      // Each reserve mint increases both cap and totalSupply by the same
+      // amount, so _availableSupply() is unchanged.
       const before = await nft.remainingSupply();
       await nft.reserveMint(owner.address, 5);
       const after = await nft.remainingSupply();
-      expect(before - after).to.equal(5n);
+      expect(after).to.equal(before);
     });
 
     it("MAX_SUPPLY is 3333", async function () {
@@ -447,6 +470,139 @@ describe("MomoCandieNFT", function () {
           .connect(addr1)
           .presaleMint(1, proof, { value: ethers.parseEther("0.01") })
       ).to.be.revertedWith("Insufficient payment");
+    });
+  });
+
+  // ── Setter events (L-1) ───────────────────────────────────────────────────
+
+  describe("Setter events (L-1)", function () {
+    it("setUnrevealedURI emits UnrevealedURIUpdated", async function () {
+      await expect(nft.setUnrevealedURI("ipfs://QmNew/unrevealed.json"))
+        .to.emit(nft, "UnrevealedURIUpdated")
+        .withArgs("ipfs://QmNew/unrevealed.json");
+    });
+
+    it("setBaseURI emits BaseURIUpdated", async function () {
+      await expect(nft.setBaseURI("ipfs://QmNew/"))
+        .to.emit(nft, "BaseURIUpdated")
+        .withArgs("ipfs://QmNew/");
+    });
+
+    it("setPrices emits PricesUpdated", async function () {
+      const newPresale = ethers.parseEther("0.02");
+      const newPublic  = ethers.parseEther("0.04");
+      await expect(nft.setPrices(newPresale, newPublic))
+        .to.emit(nft, "PricesUpdated")
+        .withArgs(newPresale, newPublic);
+    });
+
+    it("setDAOMultisig emits DAOMultisigUpdated", async function () {
+      await expect(nft.setDAOMultisig(addr3.address))
+        .to.emit(nft, "DAOMultisigUpdated")
+        .withArgs(addr3.address);
+    });
+
+    it("setDAOMultisig reverts on zero address", async function () {
+      await expect(
+        nft.setDAOMultisig(ethers.ZeroAddress)
+      ).to.be.revertedWith("Zero address");
+    });
+
+    it("non-owner cannot call setUnrevealedURI", async function () {
+      await expect(
+        nft.connect(addr1).setUnrevealedURI("ipfs://x")
+      ).to.be.reverted;
+    });
+  });
+
+  // ── Emergency pause (M-2) ─────────────────────────────────────────────────
+
+  describe("Emergency pause (M-2)", function () {
+    it("owner can pause the contract", async function () {
+      await expect(nft.pause()).to.emit(nft, "Paused").withArgs(owner.address);
+      expect(await nft.paused()).to.be.true;
+    });
+
+    it("owner can unpause the contract", async function () {
+      await nft.pause();
+      await expect(nft.unpause())
+        .to.emit(nft, "Unpaused")
+        .withArgs(owner.address);
+      expect(await nft.paused()).to.be.false;
+    });
+
+    it("non-owner cannot pause", async function () {
+      await expect(nft.connect(addr1).pause()).to.be.reverted;
+    });
+
+    it("non-owner cannot unpause", async function () {
+      await nft.pause();
+      await expect(nft.connect(addr1).unpause()).to.be.reverted;
+    });
+
+    it("presale mint reverts while paused", async function () {
+      await nft.openPresale();
+      await nft.pause();
+      const proof = proofFor(addr1);
+      await expect(
+        nft
+          .connect(addr1)
+          .presaleMint(1, proof, { value: ethers.parseEther("0.03") })
+      ).to.be.reverted;
+    });
+
+    it("public mint reverts while paused", async function () {
+      await nft.toggleSale();
+      await nft.pause();
+      await expect(
+        nft
+          .connect(addr1)
+          .publicMint(1, { value: ethers.parseEther("0.05") })
+      ).to.be.reverted;
+    });
+
+    it("reserve mint reverts while paused", async function () {
+      await nft.pause();
+      await expect(nft.reserveMint(addr1.address, 1)).to.be.reverted;
+    });
+
+    it("token transfers revert while paused", async function () {
+      // Mint before pausing
+      await nft.reserveMint(addr1.address, 1);
+      await nft.pause();
+      await expect(
+        nft.connect(addr1).transferFrom(addr1.address, addr2.address, 1)
+      ).to.be.revertedWith("Contract is paused");
+    });
+
+    it("operations resume normally after unpause", async function () {
+      await nft.toggleSale();
+      await nft.pause();
+      await nft.unpause();
+      // Should succeed now
+      await expect(
+        nft.connect(addr1).publicMint(1, { value: ethers.parseEther("0.05") })
+      ).to.changeTokenBalance(nft, addr1, 1);
+    });
+  });
+
+  // ── supportsInterface (L-3) ───────────────────────────────────────────────
+
+  describe("supportsInterface (L-3)", function () {
+    it("supports ERC-721", async function () {
+      expect(await nft.supportsInterface("0x80ac58cd")).to.be.true;
+    });
+
+    it("supports ERC-721 Enumerable", async function () {
+      expect(await nft.supportsInterface("0x780e9d63")).to.be.true;
+    });
+
+    it("supports ERC-165", async function () {
+      expect(await nft.supportsInterface("0x01ffc9a7")).to.be.true;
+    });
+
+    it("returns false for unknown interface", async function () {
+      expect(await nft.supportsInterface("0xdeadbeef")).to.be.false;
     });
   });
 });
