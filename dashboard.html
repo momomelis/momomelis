@@ -54,12 +54,28 @@
 <body class="bg-gray-900 text-white min-h-screen cyber-grid">
     <div id="root"></div>
 
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js" integrity="sha384-tMH8h3BGESGckSAVGZ82T9n90ztNXxvdwvdM6UoR56cYcf+0iGXBliJ29D+wZ/x8" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js" integrity="sha384-bm7MnzvK++ykSwVJ2tynSE5TRdN+xL418osEVF2DE/L/gfWHj91J2Sphe582B1Bh" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/@babel/standalone@7.23.2/babel.min.js" integrity="sha384-aGlMNK3U/x0wl4lEH5jD1PGhJlX9hApuPmIiA5gtiYCOQ1J8ejIdC0btaU/TMoBD" crossorigin="anonymous"></script>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useMemo } = React;
+
+        // ==================== LIVE CLOCK (isolated to prevent full re-render) ====================
+
+        function LiveClock() {
+            const [time, setTime] = useState(new Date());
+            useEffect(() => {
+                const timer = setInterval(() => setTime(new Date()), 1000);
+                return () => clearInterval(timer);
+            }, []);
+            return (
+                <div className="text-right">
+                    <div className="text-2xl font-mono text-pink-500">{time.toLocaleTimeString()}</div>
+                    <div className="text-sm text-gray-400">{time.toLocaleDateString()}</div>
+                </div>
+            );
+        }
 
         // ==================== CORE ALGORITHMIC ENGINE ====================
 
@@ -159,7 +175,7 @@
 
             // Momo Candie Business Intelligence
             analyzeBusinessMetrics: (websiteTraffic, sensorEngagement, manufacturingCosts) => {
-                const conversionRate = (sensorEngagement / websiteTraffic) * 100;
+                const conversionRate = websiteTraffic > 0 ? (sensorEngagement / websiteTraffic) * 100 : 0;
                 const costEfficiency = 100 - (manufacturingCosts / 50000) * 100;
 
                 return {
@@ -253,7 +269,6 @@
 
         function MomoIntelligenceSystem() {
             const [activeTab, setActiveTab] = useState('overview');
-            const [systemTime, setSystemTime] = useState(new Date());
 
             // Live data state (simulated - replace with real APIs)
             const [marketData] = useState({
@@ -278,45 +293,49 @@
                 manufacturingCosts: 35000
             });
 
-            // Update system time
-            useEffect(() => {
-                const timer = setInterval(() => setSystemTime(new Date()), 1000);
-                return () => clearInterval(timer);
-            }, []);
+            // Memoize analytics so the LiveClock's per-second tick never retriggers these
+            const { bitcoin, jlp, portfolio, cycle, business, decisions } = useMemo(() => {
+                const bitcoin = AlgorithmicEngine.calculateBitcoinEntry(
+                    marketData.bitcoin,
+                    [74000, 78000],
+                    'November 2026'
+                );
+                const jlp = AlgorithmicEngine.analyzeJLP(
+                    marketData.jlp.baseYield + marketData.jlp.protocolFees,
+                    marketData.jlp.baseYield,
+                    marketData.jlp.protocolFees,
+                    marketData.jlp.liquidationRisk
+                );
+                const portfolio = AlgorithmicEngine.optimizePortfolio(
+                    marketData.jpmorganGains,
+                    0.15,
+                    4354
+                );
+                const cycle = AlgorithmicEngine.analyzeCyclePhase(cycleData.currentDay);
+                const business = AlgorithmicEngine.analyzeBusinessMetrics(
+                    businessData.websiteTraffic,
+                    businessData.sensorEngagement,
+                    businessData.manufacturingCosts
+                );
+                const decisions = AlgorithmicEngine.generateDecisions(
+                    { bitcoin, jlp },
+                    portfolio,
+                    cycle,
+                    business
+                );
+                return { bitcoin, jlp, portfolio, cycle, business, decisions };
+            }, [marketData, cycleData, businessData]);
 
-            // Calculate all analytics
-            const bitcoin = AlgorithmicEngine.calculateBitcoinEntry(
-                marketData.bitcoin,
-                [74000, 78000],
-                'November 2026'
-            );
+            const TABS = ['overview', 'crypto', 'portfolio', 'business', 'wellness', 'decisions'];
 
-            const jlp = AlgorithmicEngine.analyzeJLP(
-                marketData.jlp.baseYield + marketData.jlp.protocolFees,
-                marketData.jlp.baseYield,
-                marketData.jlp.protocolFees,
-                marketData.jlp.liquidationRisk
-            );
-
-            const portfolio = AlgorithmicEngine.optimizePortfolio(
-                marketData.jpmorganGains,
-                0.15,
-                4354
-            );
-
-            const cycle = AlgorithmicEngine.analyzeCyclePhase(cycleData.currentDay);
-            const business = AlgorithmicEngine.analyzeBusinessMetrics(
-                businessData.websiteTraffic,
-                businessData.sensorEngagement,
-                businessData.manufacturingCosts
-            );
-
-            const decisions = AlgorithmicEngine.generateDecisions(
-                { bitcoin, jlp },
-                portfolio,
-                cycle,
-                business
-            );
+            const handleTabKeyDown = (e) => {
+                const idx = TABS.indexOf(activeTab);
+                if (e.key === 'ArrowRight') {
+                    setActiveTab(TABS[(idx + 1) % TABS.length]);
+                } else if (e.key === 'ArrowLeft') {
+                    setActiveTab(TABS[(idx - 1 + TABS.length) % TABS.length]);
+                }
+            };
 
             return (
                 <div className="min-h-screen p-6">
@@ -329,21 +348,24 @@
                                 </h1>
                                 <p className="text-gray-400 mt-2">Unified Algorithmic Decision Engine</p>
                             </div>
-                            <div className="text-right">
-                                <div className="text-2xl font-mono text-pink-500">
-                                    {systemTime.toLocaleTimeString()}
-                                </div>
-                                <div className="text-sm text-gray-400">
-                                    {systemTime.toLocaleDateString()}
-                                </div>
-                            </div>
+                            <LiveClock />
                         </div>
 
                         {/* Navigation */}
-                        <div className="flex gap-2 border-b border-gray-700 pb-2">
-                            {['overview', 'crypto', 'portfolio', 'business', 'wellness', 'decisions'].map(tab => (
+                        <div
+                            role="tablist"
+                            aria-label="Dashboard sections"
+                            className="flex gap-2 border-b border-gray-700 pb-2"
+                            onKeyDown={handleTabKeyDown}
+                        >
+                            {TABS.map(tab => (
                                 <button
                                     key={tab}
+                                    role="tab"
+                                    id={`tab-${tab}`}
+                                    aria-selected={activeTab === tab}
+                                    aria-controls={`panel-${tab}`}
+                                    tabIndex={activeTab === tab ? 0 : -1}
                                     onClick={() => setActiveTab(tab)}
                                     className={`px-4 py-2 rounded-t transition-all ${
                                         activeTab === tab
@@ -357,7 +379,12 @@
                         </div>
                     </div>
 
-                    <div className="max-w-7xl mx-auto">
+                    <div
+                        className="max-w-7xl mx-auto"
+                        role="tabpanel"
+                        id={`panel-${activeTab}`}
+                        aria-labelledby={`tab-${activeTab}`}
+                    >
                         {/* Overview Dashboard */}
                         {activeTab === 'overview' && (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -764,7 +791,7 @@
             );
         }
 
-        ReactDOM.render(<MomoIntelligenceSystem />, document.getElementById('root'));
+        ReactDOM.createRoot(document.getElementById('root')).render(<MomoIntelligenceSystem />);
     </script>
 </body>
 </html>
