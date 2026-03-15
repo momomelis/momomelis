@@ -179,7 +179,7 @@ contract MomoCandieNFT is ERC721, Ownable, ReentrancyGuard {
         require(salePhase == Phase.Presale, "Presale not active");
         require(_verifyWhitelist(msg.sender, proof), "Not whitelisted");
         require(presaleMintedCount[msg.sender] + quantity <= MAX_PRESALE_MINT, "Exceeds presale limit");
-        require(totalSupply() + quantity <= _availableSupply(), "Exceeds max supply");
+        require(_totalSupply + quantity <= _availableSupply(), "Exceeds max supply");
         require(msg.value >= presalePrice * quantity, "Insufficient payment");
 
         presaleMintedCount[msg.sender] += quantity;
@@ -199,7 +199,7 @@ contract MomoCandieNFT is ERC721, Ownable, ReentrancyGuard {
         require(salePhase == Phase.Public, "Public sale not active");
         require(quantity > 0 && quantity <= MAX_PER_WALLET, "Invalid quantity");
         require(publicMintedCount[msg.sender] + quantity <= MAX_PER_WALLET, "Exceeds wallet limit");
-        require(totalSupply() + quantity <= _availableSupply(), "Exceeds max supply");
+        require(_totalSupply + quantity <= _availableSupply(), "Exceeds max supply");
         require(msg.value >= publicPrice * quantity, "Insufficient payment");
 
         publicMintedCount[msg.sender] += quantity;
@@ -214,10 +214,10 @@ contract MomoCandieNFT is ERC721, Ownable, ReentrancyGuard {
     function reserveMint(address to, uint256 quantity) external onlyOwner {
         require(to != address(0), "Zero address");
         require(_reserveMinted + quantity <= RESERVE_SUPPLY, "Exceeds reserve supply");
-        require(totalSupply() + quantity <= MAX_SUPPLY, "Exceeds max supply");
+        require(_totalSupply + quantity <= MAX_SUPPLY, "Exceeds max supply");
 
         _reserveMinted += quantity;
-        _mintBatch(to, quantity);
+        _safeMintBatch(to, quantity);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -225,7 +225,15 @@ contract MomoCandieNFT is ERC721, Ownable, ReentrancyGuard {
     // ─────────────────────────────────────────────────────────────────────────
 
     function _mintBatch(address to, uint256 quantity) internal {
-        uint256 start = totalSupply() + 1; // 1-indexed; snapshot before any mints in this batch
+        uint256 start = _totalSupply + 1; // 1-indexed; read private var directly for gas efficiency
+        for (uint256 i = 0; i < quantity; i++) {
+            _mint(to, start + i);
+        }
+    }
+
+    /// @dev Like _mintBatch but uses _safeMint, for recipients that may be contracts (e.g. reserve mint).
+    function _safeMintBatch(address to, uint256 quantity) internal {
+        uint256 start = _totalSupply + 1; // 1-indexed; read private var directly for gas efficiency
         for (uint256 i = 0; i < quantity; i++) {
             _safeMint(to, start + i);
         }
