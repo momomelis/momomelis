@@ -49,7 +49,7 @@ momomelis/
 
 ```
 MomoCandieNFT
-  ├── ERC721Enumerable (OpenZeppelin)
+  ├── ERC721 (OpenZeppelin)
   ├── Ownable (OpenZeppelin)
   └── ReentrancyGuard (OpenZeppelin)
 ```
@@ -81,6 +81,7 @@ string  private _baseTokenURI;        // Revealed base URI
 string  public  unrevealedURI;        // Pre-reveal placeholder URI
 address public daoMultisig;           // Target address for DAO handoff
 uint256 private _reserveMinted;       // Count of reserve tokens minted
+uint256 private _totalSupply;         // Incremented on mint, decremented on burn
 mapping(address => uint256) public presaleMintedCount;
 mapping(address => uint256) public publicMintedCount;
 ```
