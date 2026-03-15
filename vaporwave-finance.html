@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ＮＯＳＴＡＬＧＩＡ ＥＮＧＩＮＥ - Vaporwave Financial Super App</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Courier New', monospace; background: #0a0015; color: #fff; overflow-x: hidden; }
+        button { font-family: 'Courier New', monospace; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); }
+        ::-webkit-scrollbar-thumb { background: rgba(255,113,206,0.3); border-radius: 3px; }
+
+        @keyframes glitch1 {
+            0%,100%{clip-path:inset(0 0 95% 0);transform:translateX(-2px)}
+            20%{clip-path:inset(30% 0 50% 0);transform:translateX(2px)}
+            40%{clip-path:inset(70% 0 10% 0);transform:translateX(-1px)}
+        }
+        @keyframes glitch2 {
+            0%,100%{clip-path:inset(50% 0 30% 0);transform:translateX(2px)}
+            30%{clip-path:inset(10% 0 80% 0);transform:translateX(-2px)}
+            60%{clip-path:inset(80% 0 5% 0);transform:translateX(1px)}
+        }
+        @keyframes ticker {
+            0%{transform:translateX(0)}
+            100%{transform:translateX(-50%)}
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // ═══════════════════════════════════════════════
+        //  ＶＡＰＯＲＷＡＶＥ ＮＯＳＴＡＬＧＩＡ ＥＮＧＩＮＥ
+        //  All-In-One Financial Super App
+        // ═══════════════════════════════════════════════
+
+        const COLORS = {
+            pink: "#ff71ce",
+            cyan: "#01cdfe",
+            purple: "#b967ff",
+            teal: "#05ffa1",
+            yellow: "#fffb96",
+            bg: "#0a0015",
+            card: "rgba(255,255,255,0.04)",
+            border: "rgba(255,113,206,0.2)",
+        };
+
+        // Mock Data
+        const WALLET_DATA = {
+            crypto: [
+                { symbol: "BTC", name: "Bitcoin", balance: 0.4821, price: 67420.50, change: 2.34, color: "#f7931a" },
+                { symbol: "ETH", name: "Ethereum", balance: 3.22, price: 3541.80, change: -1.12, color: "#627eea" },
+                { symbol: "SOL", name: "Solana", balance: 42.1, price: 182.40, change: 5.67, color: "#9945ff" },
+                { symbol: "AVAX", name: "Avalanche", balance: 18.5, price: 38.92, change: -0.88, color: "#e84142" },
+            ],
+            stocks: [
+                { symbol: "NVDA", name: "NVIDIA", shares: 12, price: 875.40, change: 3.21, color: "#76b900" },
+                { symbol: "AAPL", name: "Apple", shares: 25, price: 189.30, change: -0.54, color: "#aaa" },
+                { symbol: "TSLA", name: "Tesla", shares: 8, price: 245.80, change: 7.11, color: "#cc0000" },
+                { symbol: "MSFT", name: "Microsoft", shares: 15, price: 412.70, change: 1.02, color: "#00a4ef" },
+            ],
+            forex: [
+                { symbol: "EUR/USD", rate: 1.0842, change: 0.12, spread: 0.0001 },
+                { symbol: "GBP/USD", rate: 1.2634, change: -0.23, spread: 0.0002 },
+                { symbol: "USD/JPY", rate: 149.82, change: 0.44, spread: 0.001 },
+                { symbol: "AUD/USD", rate: 0.6531, change: -0.09, spread: 0.0001 },
+            ],
+        };
+
+        const ORDER_BOOK = {
+            bids: [
+                { price: 67380.00, size: 0.842, total: 56770.96 },
+                { price: 67350.00, size: 1.204, total: 81049.00 },
+                { price: 67310.00, size: 2.110, total: 142024.10 },
+                { price: 67290.00, size: 0.550, total: 36909.50 },
+                { price: 67250.00, size: 3.020, total: 202875.00 },
+                { price: 67200.00, size: 1.780, total: 119616.00 },
+            ],
+            asks: [
+                { price: 67420.00, size: 0.621, total: 41877.70 },
+                { price: 67450.00, size: 1.334, total: 89978.30 },
+                { price: 67480.00, size: 0.880, total: 59382.40 },
+                { price: 67510.00, size: 2.450, total: 165399.50 },
+                { price: 67560.00, size: 1.120, total: 75667.20 },
+                { price: 67600.00, size: 0.740, total: 50024.00 },
+            ],
+        };
+
+        const PORTFOLIO_METRICS = {
+            totalValue: 94821.42,
+            dayChange: +1847.32,
+            dayChangePct: 1.99,
+            weekChange: +4210.80,
+            allTime: +22140.60,
+            sharpeRatio: 1.84,
+            beta: 1.12,
+            alpha: 0.034,
+            volatility: 18.4,
+            maxDrawdown: -12.3,
+        };
+
+        const CHART_POINTS = [42,45,43,47,52,49,55,58,54,62,67,65,71,68,74,78,75,82,80,88,85,92,89,95];
+
+        const TRIVIA_BANK = [
+            { q: "What year was Bitcoin's genesis block mined?", options: ["2007","2008","2009","2010"], a: 2, cat: "Crypto" },
+            { q: "Which country first adopted Bitcoin as legal tender?", options: ["Panama","El Salvador","Venezuela","Argentina"], a: 1, cat: "Crypto" },
+            { q: "What does 'HODL' originally come from?", options: ["Hold On for Dear Life","A typo of 'hold'","A Japanese term","A Bitcoin forum meme"], a: 1, cat: "Crypto" },
+            { q: "What is the Sharpe ratio used to measure?", options: ["Volatility","Risk-adjusted return","Market cap","Dividend yield"], a: 1, cat: "Finance" },
+            { q: "Who wrote 'The Intelligent Investor'?", options: ["Warren Buffett","Peter Lynch","Benjamin Graham","John Bogle"], a: 2, cat: "Finance" },
+            { q: "What does ETF stand for?", options: ["Electronic Transfer Fund","Exchange Traded Fund","Equity Trading Format","External Tier Finance"], a: 1, cat: "Finance" },
+            { q: "In Forex, what is a 'pip'?", options: ["Percentage in point","Price index point","Primary investment pair","Profit impact prediction"], a: 0, cat: "Forex" },
+            { q: "What was the peak price of BTC in November 2021?", options: ["$58,000","$64,000","$69,000","$75,000"], a: 2, cat: "Crypto" },
+        ];
+
+        const NEWS = [
+            { headline: "Federal Reserve signals potential rate cuts in Q2 2026", time: "2h ago", tag: "MACRO", hot: true },
+            { headline: "Bitcoin ETF inflows hit record $2.1B in single week", time: "3h ago", tag: "CRYPTO", hot: true },
+            { headline: "NVIDIA announces next-gen AI chip architecture 'Blackwell Ultra'", time: "5h ago", tag: "TECH", hot: false },
+            { headline: "EUR/USD breaks key resistance at 1.0850 amid dollar weakness", time: "6h ago", tag: "FOREX", hot: false },
+            { headline: "Ethereum staking yields reach 4.8% following Dencun upgrade", time: "8h ago", tag: "CRYPTO", hot: false },
+            { headline: "S&P 500 hits all-time high as inflation data cools", time: "10h ago", tag: "STOCKS", hot: true },
+            { headline: "Solana DEX volume surpasses Ethereum mainnet for 3rd straight month", time: "12h ago", tag: "CRYPTO", hot: false },
+        ];
+
+        const LESSONS = [
+            { title: "Order Books Decoded", level: "Beginner", duration: "5 min", icon: "📖", desc: "Understand bid-ask spread, market depth, and how order books reveal market sentiment in real time.", color: COLORS.cyan },
+            { title: "RSI & MACD Masterclass", level: "Intermediate", duration: "12 min", icon: "📊", desc: "Learn to read momentum indicators, spot divergences, and time entries like a seasoned trader.", color: COLORS.pink },
+            { title: "Portfolio Risk Management", level: "Intermediate", duration: "8 min", icon: "🛡️", desc: "Sharpe ratio, max drawdown, beta — build a portfolio that survives the volatility storm.", color: COLORS.purple },
+            { title: "DeFi Yield Strategies", level: "Advanced", duration: "15 min", icon: "⚡", desc: "Liquidity pools, impermanent loss, and how to farm yields without getting wrecked by the math.", color: COLORS.teal },
+            { title: "Forex Fundamentals", level: "Beginner", duration: "7 min", icon: "🌍", desc: "Currency pairs, pips, leverage, and why macro events move markets before retail traders react.", color: COLORS.yellow },
+            { title: "Technical Analysis: Price Action", level: "Advanced", duration: "20 min", icon: "🕯️", desc: "Candlestick patterns, support/resistance, and reading the market's actual intentions vs noise.", color: COLORS.pink },
+        ];
+
+        // ─── Micro Components ──────────────────────────────────────────────
+
+        function GlitchText({ text, style = {} }) {
+            return (
+                <span style={{ position: "relative", display: "inline-block", ...style }}>
+                    {text}
+                    <span style={{
+                        position: "absolute", top: 0, left: 0, color: COLORS.pink,
+                        animation: "glitch1 3.5s infinite", opacity: 0.6, pointerEvents: "none"
+                    }}>{text}</span>
+                    <span style={{
+                        position: "absolute", top: 0, left: 0, color: COLORS.cyan,
+                        animation: "glitch2 3.5s infinite 0.1s", opacity: 0.4, pointerEvents: "none"
+                    }}>{text}</span>
+                </span>
+            );
+        }
+
+        function Card({ children, style = {}, glow, onClick }) {
+            return (
+                <div onClick={onClick} style={{
+                    background: COLORS.card,
+                    border: `1px solid ${glow ? glow : COLORS.border}`,
+                    borderRadius: 12,
+                    padding: "16px 20px",
+                    backdropFilter: "blur(12px)",
+                    boxShadow: glow ? `0 0 20px ${glow}33` : "none",
+                    transition: "all 0.3s ease",
+                    ...style
+                }}>
+                    {children}
+                </div>
+            );
+        }
+
+        function Badge({ label, color }) {
+            return (
+                <span style={{
+                    background: `${color}22`, color, border: `1px solid ${color}55`,
+                    padding: "2px 8px", borderRadius: 20, fontSize: 10, fontWeight: 700,
+                    letterSpacing: 1, textTransform: "uppercase", fontFamily: "monospace"
+                }}>{label}</span>
+            );
+        }
+
+        function ChangeIndicator({ value, pct }) {
+            const pos = value >= 0;
+            return (
+                <span style={{ color: pos ? COLORS.teal : COLORS.pink, fontSize: 12, fontWeight: 700 }}>
+                    {pos ? "▲" : "▼"} {Math.abs(pct).toFixed(2)}%
+                </span>
+            );
+        }
+
+        // ─── TABS ──────────────────────────────────────────────────────────
+
+        function WalletTab() {
+            const [activeAsset, setActiveAsset] = useState("crypto");
+            const tabs = ["crypto", "stocks", "forex"];
+
+            const totalValue = () => {
+                if (activeAsset === "crypto")
+                    return WALLET_DATA.crypto.reduce((s, c) => s + c.balance * c.price, 0);
+                if (activeAsset === "stocks")
+                    return WALLET_DATA.stocks.reduce((s, c) => s + c.shares * c.price, 0);
+                return null;
+            };
+
+            return (
+                <div>
+                    <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+                        {tabs.map(t => (
+                            <button key={t} onClick={() => setActiveAsset(t)} style={{
+                                padding: "8px 18px", borderRadius: 20, border: "none", cursor: "pointer",
+                                background: activeAsset === t ? `linear-gradient(135deg,${COLORS.pink},${COLORS.purple})` : "rgba(255,255,255,0.05)",
+                                color: activeAsset === t ? "#fff" : "rgba(255,255,255,0.5)",
+                                fontFamily: "monospace", fontWeight: 700, fontSize: 11,
+                                textTransform: "uppercase", letterSpacing: 1, transition: "all 0.2s"
+                            }}>{t}</button>
+                        ))}
+                        {totalValue() && (
+                            <div style={{ marginLeft: "auto", color: COLORS.yellow, fontFamily: "monospace", fontSize: 13, alignSelf: "center" }}>
+                                TOTAL: ${totalValue().toLocaleString("en-US", { maximumFractionDigits: 0 })}
+                            </div>
+                        )}
+                    </div>
+
+                    {activeAsset === "crypto" && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                            {WALLET_DATA.crypto.map(c => (
+                                <Card key={c.symbol} glow={c.color} style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                                    <div style={{
+                                        width: 40, height: 40, borderRadius: "50%", background: `${c.color}33`,
+                                        border: `2px solid ${c.color}`, display: "flex", alignItems: "center", justifyContent: "center",
+                                        color: c.color, fontWeight: 900, fontSize: 11, flexShrink: 0
+                                    }}>{c.symbol.slice(0, 2)}</div>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>{c.symbol}</div>
+                                        <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>{c.name}</div>
+                                    </div>
+                                    <div style={{ textAlign: "right" }}>
+                                        <div style={{ color: "#fff", fontFamily: "monospace", fontWeight: 700 }}>
+                                            ${(c.balance * c.price).toLocaleString("en-US", { maximumFractionDigits: 0 })}
+                                        </div>
+                                        <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, fontFamily: "monospace" }}>
+                                            {c.balance} {c.symbol}
+                                        </div>
+                                    </div>
+                                    <div style={{ minWidth: 60, textAlign: "right" }}>
+                                        <ChangeIndicator value={c.change} pct={c.change} />
+                                        <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, fontFamily: "monospace" }}>
+                                            ${c.price.toLocaleString()}
+                                        </div>
+                                    </div>
+                                </Card>
+                            ))}
+                        </div>
+                    )}
+
+                    {activeAsset === "stocks" && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                            {WALLET_DATA.stocks.map(s => (
+                                <Card key={s.symbol} glow={s.color} style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                                    <div style={{
+                                        width: 40, height: 40, borderRadius: 8, background: `${s.color}22`,
+                                        border: `2px solid ${s.color}`, display: "flex", alignItems: "center", justifyContent: "center",
+                                        color: s.color, fontWeight: 900, fontSize: 10, flexShrink: 0
+                                    }}>{s.symbol}</div>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>{s.symbol}</div>
+                                        <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>{s.name} · {s.shares} shares</div>
+                                    </div>
+                                    <div style={{ textAlign: "right" }}>
+                                        <div style={{ color: "#fff", fontFamily: "monospace", fontWeight: 700 }}>
+                                            ${(s.shares * s.price).toLocaleString("en-US", { maximumFractionDigits: 0 })}
+                                        </div>
+                                        <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>@ ${s.price}</div>
+                                    </div>
+                                    <div style={{ minWidth: 60, textAlign: "right" }}>
+                                        <ChangeIndicator value={s.change} pct={s.change} />
+                                    </div>
+                                </Card>
+                            ))}
+                        </div>
+                    )}
+
+                    {activeAsset === "forex" && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                            {WALLET_DATA.forex.map(f => (
+                                <Card key={f.symbol} style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                                    <div style={{
+                                        width: 40, height: 40, borderRadius: 8, background: "rgba(1,205,254,0.1)",
+                                        border: `2px solid ${COLORS.cyan}`, display: "flex", alignItems: "center", justifyContent: "center",
+                                        color: COLORS.cyan, fontWeight: 900, fontSize: 9, flexShrink: 0, textAlign: "center", padding: 2
+                                    }}>{f.symbol.replace("/", "\n")}</div>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>{f.symbol}</div>
+                                        <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>Spread: {f.spread}</div>
+                                    </div>
+                                    <div style={{ fontFamily: "monospace", color: "#fff", fontWeight: 700, fontSize: 15 }}>
+                                        {f.rate}
+                                    </div>
+                                    <div style={{ minWidth: 60, textAlign: "right" }}>
+                                        <ChangeIndicator value={f.change} pct={f.change} />
+                                    </div>
+                                </Card>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        function OrderBookTab() {
+            const [pair, setPair] = useState("BTC/USDT");
+            const maxBid = Math.max(...ORDER_BOOK.bids.map(b => b.size));
+            const maxAsk = Math.max(...ORDER_BOOK.asks.map(a => a.size));
+            const spread = (ORDER_BOOK.asks[0].price - ORDER_BOOK.bids[0].price).toFixed(1);
+
+            return (
+                <div>
+                    <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
+                        {["BTC/USDT", "ETH/USDT", "SOL/USDT", "EUR/USD"].map(p => (
+                            <button key={p} onClick={() => setPair(p)} style={{
+                                padding: "6px 14px", borderRadius: 20, cursor: "pointer",
+                                background: pair === p ? `${COLORS.cyan}33` : "rgba(255,255,255,0.05)",
+                                color: pair === p ? COLORS.cyan : "rgba(255,255,255,0.4)",
+                                fontFamily: "monospace", fontSize: 11, fontWeight: 700,
+                                border: pair === p ? `1px solid ${COLORS.cyan}` : "1px solid transparent"
+                            }}>{p}</button>
+                        ))}
+                    </div>
+
+                    <div style={{ textAlign: "center", marginBottom: 16 }}>
+                        <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, fontFamily: "monospace" }}>SPREAD</div>
+                        <div style={{ color: COLORS.yellow, fontFamily: "monospace", fontWeight: 900, fontSize: 18 }}>
+                            ${spread} <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>
+                                ({((Number(spread) / ORDER_BOOK.asks[0].price) * 100).toFixed(3)}%)
+                            </span>
+                        </div>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                        <div>
+                            <div style={{ color: COLORS.teal, fontFamily: "monospace", fontSize: 11, fontWeight: 700, marginBottom: 8 }}>
+                                ▲ BIDS
+                            </div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                                {ORDER_BOOK.bids.map((b, i) => (
+                                    <div key={i} style={{ position: "relative", borderRadius: 4, overflow: "hidden" }}>
+                                        <div style={{
+                                            position: "absolute", top: 0, left: 0, height: "100%",
+                                            width: `${(b.size / maxBid) * 100}%`,
+                                            background: `${COLORS.teal}15`, borderRight: `2px solid ${COLORS.teal}33`
+                                        }} />
+                                        <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 8px", fontFamily: "monospace", fontSize: 11, position: "relative" }}>
+                                            <span style={{ color: COLORS.teal }}>{b.price.toFixed(1)}</span>
+                                            <span style={{ color: "rgba(255,255,255,0.6)" }}>{b.size}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        <div>
+                            <div style={{ color: COLORS.pink, fontFamily: "monospace", fontSize: 11, fontWeight: 700, marginBottom: 8 }}>
+                                ▼ ASKS
+                            </div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                                {ORDER_BOOK.asks.map((a, i) => (
+                                    <div key={i} style={{ position: "relative", borderRadius: 4, overflow: "hidden" }}>
+                                        <div style={{
+                                            position: "absolute", top: 0, right: 0, height: "100%",
+                                            width: `${(a.size / maxAsk) * 100}%`,
+                                            background: `${COLORS.pink}15`, borderLeft: `2px solid ${COLORS.pink}33`
+                                        }} />
+                                        <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 8px", fontFamily: "monospace", fontSize: 11, position: "relative" }}>
+                                            <span style={{ color: "rgba(255,255,255,0.6)" }}>{a.size}</span>
+                                            <span style={{ color: COLORS.pink }}>{a.price.toFixed(1)}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    <Card style={{ marginTop: 16, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                        {[
+                            { label: "24H Volume", value: "$2.4B" },
+                            { label: "Bid Depth", value: "847 BTC" },
+                            { label: "Ask Depth", value: "623 BTC" },
+                        ].map(m => (
+                            <div key={m.label} style={{ textAlign: "center" }}>
+                                <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 10, fontFamily: "monospace" }}>{m.label}</div>
+                                <div style={{ color: "#fff", fontFamily: "monospace", fontWeight: 700, fontSize: 14 }}>{m.value}</div>
+                            </div>
+                        ))}
+                    </Card>
+                </div>
+            );
+        }
+
+        function AnalysisTab() {
+            const [activeView, setActiveView] = useState("portfolio");
+            const pm = PORTFOLIO_METRICS;
+            const w = 520, h = 120;
+            const pts = CHART_POINTS;
+            const min = Math.min(...pts), max = Math.max(...pts);
+            const scaleY = v => h - ((v - min) / (max - min)) * (h - 10) - 5;
+            const scaleX = i => (i / (pts.length - 1)) * w;
+            const pathD = pts.map((v, i) => `${i === 0 ? "M" : "L"}${scaleX(i)},${scaleY(v)}`).join(" ");
+            const areaD = `${pathD} L${w},${h} L0,${h} Z`;
+
+            return (
+                <div>
+                    <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+                        {["portfolio", "technical"].map(v => (
+                            <button key={v} onClick={() => setActiveView(v)} style={{
+                                padding: "8px 18px", borderRadius: 20, border: "none", cursor: "pointer",
+                                background: activeView === v ? `linear-gradient(135deg,${COLORS.purple},${COLORS.cyan})` : "rgba(255,255,255,0.05)",
+                                color: activeView === v ? "#fff" : "rgba(255,255,255,0.5)",
+                                fontFamily: "monospace", fontWeight: 700, fontSize: 11,
+                                textTransform: "uppercase", letterSpacing: 1, transition: "all 0.2s"
+                            }}>{v}</button>
+                        ))}
+                    </div>
+
+                    {activeView === "portfolio" && (
+                        <div>
+                            <Card glow={COLORS.purple} style={{ marginBottom: 16 }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
+                                    <div>
+                                        <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, fontFamily: "monospace" }}>TOTAL PORTFOLIO VALUE</div>
+                                        <div style={{ color: "#fff", fontFamily: "monospace", fontWeight: 900, fontSize: 28, marginTop: 4 }}>
+                                            ${pm.totalValue.toLocaleString()}
+                                        </div>
+                                        <div style={{ marginTop: 6 }}>
+                                            <ChangeIndicator value={pm.dayChange} pct={pm.dayChangePct} />
+                                            <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, marginLeft: 6 }}>today</span>
+                                        </div>
+                                    </div>
+                                    <div style={{ textAlign: "right" }}>
+                                        <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, fontFamily: "monospace" }}>ALL TIME P&L</div>
+                                        <div style={{ color: COLORS.teal, fontFamily: "monospace", fontWeight: 700, fontSize: 18 }}>
+                                            +${pm.allTime.toLocaleString()}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style={{ marginTop: 16, position: "relative" }}>
+                                    <svg viewBox={`0 0 ${w} ${h}`} style={{ width: "100%", height: 100, display: "block" }}>
+                                        <defs>
+                                            <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="0%" stopColor={COLORS.purple} stopOpacity="0.5" />
+                                                <stop offset="100%" stopColor={COLORS.purple} stopOpacity="0" />
+                                            </linearGradient>
+                                        </defs>
+                                        <path d={areaD} fill="url(#chartGrad)" />
+                                        <path d={pathD} fill="none" stroke={COLORS.purple} strokeWidth="2.5" strokeLinecap="round" />
+                                        <circle cx={scaleX(pts.length - 1)} cy={scaleY(pts[pts.length - 1])} r="4" fill={COLORS.pink} />
+                                    </svg>
+                                </div>
+                            </Card>
+
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+                                {[
+                                    { label: "Sharpe Ratio", value: pm.sharpeRatio, color: COLORS.teal, good: pm.sharpeRatio > 1 },
+                                    { label: "Beta", value: pm.beta, color: COLORS.cyan, good: pm.beta < 1.5 },
+                                    { label: "Alpha", value: `+${(pm.alpha * 100).toFixed(1)}%`, color: COLORS.pink, good: true },
+                                    { label: "Volatility", value: `${pm.volatility}%`, color: COLORS.yellow, good: null },
+                                    { label: "Max Drawdown", value: `${pm.maxDrawdown}%`, color: COLORS.pink, good: false },
+                                    { label: "7D Change", value: `+$${pm.weekChange.toLocaleString()}`, color: COLORS.teal, good: true },
+                                ].map(m => (
+                                    <Card key={m.label} glow={m.color}>
+                                        <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 10, fontFamily: "monospace" }}>{m.label}</div>
+                                        <div style={{ color: m.color, fontFamily: "monospace", fontWeight: 900, fontSize: 16, marginTop: 4 }}>{m.value}</div>
+                                        {m.good !== null && (
+                                            <div style={{ fontSize: 10, color: m.good ? COLORS.teal : COLORS.pink, marginTop: 2 }}>
+                                                {m.good ? "● Healthy" : "● Watch"}
+                                            </div>
+                                        )}
+                                    </Card>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {activeView === "technical" && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                            {[
+                                { label: "RSI (14)", value: 62.4, bar: 62.4, color: COLORS.yellow, note: "Approaching overbought zone" },
+                                { label: "MACD", value: "+124.8", bar: 70, color: COLORS.teal, note: "Bullish crossover confirmed" },
+                                { label: "Bollinger Band %B", value: 0.72, bar: 72, color: COLORS.cyan, note: "Upper band pressure" },
+                                { label: "Stochastic %K", value: 78.3, bar: 78.3, color: COLORS.pink, note: "Momentum extended" },
+                                { label: "Volume (vs 20D avg)", value: "+34%", bar: 67, color: COLORS.purple, note: "Strong conviction" },
+                                { label: "ATR (14)", value: 1842, bar: 55, color: COLORS.yellow, note: "Moderate volatility" },
+                            ].map(i => (
+                                <Card key={i.label}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                                        <div>
+                                            <div style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>{i.label}</div>
+                                            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>{i.note}</div>
+                                        </div>
+                                        <div style={{ color: i.color, fontFamily: "monospace", fontWeight: 900, fontSize: 18 }}>{i.value}</div>
+                                    </div>
+                                    <div style={{ height: 6, background: "rgba(255,255,255,0.1)", borderRadius: 3 }}>
+                                        <div style={{ height: "100%", width: `${i.bar}%`, background: `linear-gradient(90deg,${i.color}88,${i.color})`, borderRadius: 3, transition: "width 0.8s ease" }} />
+                                    </div>
+                                </Card>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        function TriviaTab() {
+            const [qIdx, setQIdx] = useState(0);
+            const [selected, setSelected] = useState(null);
+            const [score, setScore] = useState(0);
+            const [total, setTotal] = useState(0);
+            const q = TRIVIA_BANK[qIdx % TRIVIA_BANK.length];
+
+            const choose = (i) => {
+                if (selected !== null) return;
+                setSelected(i);
+                setTotal(t => t + 1);
+                if (i === q.a) setScore(s => s + 1);
+            };
+
+            const next = () => {
+                setSelected(null);
+                setQIdx(i => i + 1);
+            };
+
+            return (
+                <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                        <div>
+                            <Badge label={q.cat} color={COLORS.pink} />
+                            <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 11, marginLeft: 8 }}>Q{(qIdx % TRIVIA_BANK.length) + 1}/{TRIVIA_BANK.length}</span>
+                        </div>
+                        <div style={{ fontFamily: "monospace", color: COLORS.yellow, fontWeight: 700 }}>
+                            {score}/{total} correct
+                        </div>
+                    </div>
+
+                    <Card glow={COLORS.purple} style={{ marginBottom: 16 }}>
+                        <div style={{ color: "#fff", fontSize: 16, fontWeight: 700, lineHeight: 1.5 }}>{q.q}</div>
+                    </Card>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
+                        {q.options.map((opt, i) => {
+                            let bg = "rgba(255,255,255,0.05)";
+                            let border = "1px solid rgba(255,255,255,0.1)";
+                            let color = "rgba(255,255,255,0.8)";
+                            if (selected !== null) {
+                                if (i === q.a) { bg = `${COLORS.teal}22`; border = `1px solid ${COLORS.teal}`; color = COLORS.teal; }
+                                else if (i === selected && selected !== q.a) { bg = `${COLORS.pink}22`; border = `1px solid ${COLORS.pink}`; color = COLORS.pink; }
+                            }
+                            return (
+                                <button key={i} onClick={() => choose(i)} style={{
+                                    background: bg, border, borderRadius: 10, padding: "12px 16px",
+                                    color, textAlign: "left", cursor: selected ? "default" : "pointer",
+                                    fontFamily: "monospace", fontSize: 13, transition: "all 0.2s", width: "100%"
+                                }}>
+                                    <span style={{ opacity: 0.5, marginRight: 10 }}>{String.fromCharCode(65 + i)}.</span> {opt}
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {selected !== null && (
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <div style={{ color: selected === q.a ? COLORS.teal : COLORS.pink, fontWeight: 700, fontSize: 14 }}>
+                                {selected === q.a ? "✓ Correct! +1 signal boost" : `✗ The answer was: ${q.options[q.a]}`}
+                            </div>
+                            <button onClick={next} style={{
+                                background: `linear-gradient(135deg,${COLORS.pink},${COLORS.purple})`,
+                                border: "none", borderRadius: 20, padding: "8px 20px",
+                                color: "#fff", cursor: "pointer", fontFamily: "monospace", fontWeight: 700
+                            }}>NEXT →</button>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        function NewsTab() {
+            return (
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {NEWS.map((n, i) => (
+                        <Card key={i} style={{ cursor: "pointer", transition: "all 0.2s" }}
+                            glow={n.hot ? COLORS.pink : undefined}>
+                            <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                                {n.hot && <span style={{ color: COLORS.pink, fontSize: 14, flexShrink: 0, marginTop: 2 }}>🔥</span>}
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ color: "#fff", fontSize: 13, fontWeight: 600, lineHeight: 1.4, marginBottom: 6 }}>
+                                        {n.headline}
+                                    </div>
+                                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                                        <Badge label={n.tag} color={
+                                            n.tag === "CRYPTO" ? COLORS.purple :
+                                            n.tag === "STOCKS" ? COLORS.teal :
+                                            n.tag === "FOREX" ? COLORS.cyan :
+                                            n.tag === "MACRO" ? COLORS.yellow : COLORS.pink
+                                        } />
+                                        <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 11 }}>{n.time}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </Card>
+                    ))}
+                </div>
+            );
+        }
+
+        function LearnTab() {
+            const [active, setActive] = useState(null);
+
+            return (
+                <div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                        {LESSONS.map((l, i) => (
+                            <Card key={i} glow={l.color} style={{ cursor: "pointer", transition: "all 0.3s" }}
+                                onClick={() => setActive(active === i ? null : i)}>
+                                <div style={{ fontSize: 24, marginBottom: 8 }}>{l.icon}</div>
+                                <div style={{ color: "#fff", fontWeight: 700, fontSize: 13, marginBottom: 4 }}>{l.title}</div>
+                                <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                                    <Badge label={l.level} color={l.color} />
+                                    <Badge label={l.duration} color="rgba(255,255,255,0.5)" />
+                                </div>
+                                {active === i && (
+                                    <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, lineHeight: 1.5, marginTop: 8, borderTop: `1px solid ${l.color}33`, paddingTop: 8 }}>
+                                        {l.desc}
+                                        <button style={{
+                                            marginTop: 12, display: "block", width: "100%",
+                                            background: `${l.color}22`, border: `1px solid ${l.color}`,
+                                            borderRadius: 8, padding: "8px 0", color: l.color,
+                                            cursor: "pointer", fontFamily: "monospace", fontWeight: 700, fontSize: 11
+                                        }}>START LESSON →</button>
+                                    </div>
+                                )}
+                            </Card>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        // ─── TICKER ────────────────────────────────────────────────────────
+        function Ticker() {
+            const items = [
+                "BTC $67,420 ▲2.34%", "ETH $3,541 ▼1.12%", "SOL $182.40 ▲5.67%",
+                "NVDA $875.40 ▲3.21%", "AAPL $189.30 ▼0.54%", "EUR/USD 1.0842 ▲0.12%",
+                "S&P500 ▲1.02%", "TSLA $245.80 ▲7.11%", "GBP/USD 1.2634 ▼0.23%",
+            ];
+            const full = [...items, ...items].join("  ·  ");
+
+            return (
+                <div style={{
+                    background: "rgba(255,113,206,0.08)", borderTop: `1px solid ${COLORS.border}`,
+                    borderBottom: `1px solid ${COLORS.border}`, padding: "8px 0",
+                    overflow: "hidden", position: "relative"
+                }}>
+                    <div style={{
+                        display: "inline-block", whiteSpace: "nowrap",
+                        animation: "ticker 40s linear infinite",
+                        color: "rgba(255,255,255,0.7)", fontFamily: "monospace", fontSize: 11
+                    }}>
+                        {full}{"     "}{full}
+                    </div>
+                </div>
+            );
+        }
+
+        // ─── MAIN APP ──────────────────────────────────────────────────────
+        const TABS = [
+            { id: "wallet", label: "WALLET", icon: "◈" },
+            { id: "orders", label: "ORDER BOOK", icon: "⟁" },
+            { id: "analysis", label: "ANALYSIS", icon: "◉" },
+            { id: "trivia", label: "TRIVIA", icon: "⬡" },
+            { id: "news", label: "NEWS", icon: "◇" },
+            { id: "learn", label: "LEARN", icon: "◫" },
+        ];
+
+        function VaporApp() {
+            const [tab, setTab] = useState("wallet");
+            const [time, setTime] = useState(new Date());
+
+            useEffect(() => {
+                const t = setInterval(() => setTime(new Date()), 1000);
+                return () => clearInterval(t);
+            }, []);
+
+            return (
+                <div style={{
+                    minHeight: "100vh", background: COLORS.bg,
+                    fontFamily: "'Courier New', monospace",
+                    position: "relative", overflow: "hidden"
+                }}>
+                    {/* Ambient background */}
+                    <div style={{
+                        position: "fixed", inset: 0, pointerEvents: "none",
+                        background: `radial-gradient(ellipse 80% 40% at 20% 0%, rgba(185,103,255,0.12) 0%, transparent 60%), radial-gradient(ellipse 60% 50% at 80% 100%, rgba(1,205,254,0.1) 0%, transparent 60%), radial-gradient(ellipse 40% 40% at 50% 50%, rgba(255,113,206,0.04) 0%, transparent 70%)`
+                    }} />
+
+                    {/* Header */}
+                    <div style={{
+                        padding: "16px 24px", display: "flex", alignItems: "center",
+                        justifyContent: "space-between", borderBottom: `1px solid ${COLORS.border}`,
+                        background: "rgba(0,0,0,0.3)", backdropFilter: "blur(20px)",
+                        position: "sticky", top: 0, zIndex: 100
+                    }}>
+                        <div>
+                            <div style={{ fontSize: 18, fontWeight: 900, letterSpacing: 2 }}>
+                                <GlitchText text="ＮＯＳＴＡＬＧＩＡ" style={{ color: COLORS.pink }} />
+                                <span style={{ color: "rgba(255,255,255,0.3)", margin: "0 8px" }}>·</span>
+                                <span style={{ color: COLORS.cyan, fontSize: 13 }}>ＥＮＧＩＮＥ</span>
+                            </div>
+                            <div style={{ color: "rgba(255,255,255,0.25)", fontSize: 9, letterSpacing: 2 }}>
+                                FINANCIAL SUPER APP v0.9X
+                            </div>
+                        </div>
+                        <div style={{ textAlign: "right" }}>
+                            <div style={{ color: COLORS.yellow, fontFamily: "monospace", fontSize: 13, fontWeight: 700 }}>
+                                {time.toLocaleTimeString()}
+                            </div>
+                            <div style={{ color: "rgba(255,255,255,0.3)", fontSize: 9 }}>
+                                SIGNAL: STRONG ●
+                            </div>
+                        </div>
+                    </div>
+
+                    <Ticker />
+
+                    {/* Nav */}
+                    <div style={{
+                        display: "flex", gap: 0, overflowX: "auto", padding: "0 16px",
+                        borderBottom: `1px solid ${COLORS.border}`,
+                        background: "rgba(0,0,0,0.2)"
+                    }}>
+                        {TABS.map(t => (
+                            <button key={t.id} onClick={() => setTab(t.id)} style={{
+                                padding: "12px 16px", border: "none", cursor: "pointer", flexShrink: 0,
+                                background: "transparent",
+                                color: tab === t.id ? COLORS.pink : "rgba(255,255,255,0.35)",
+                                fontFamily: "monospace", fontSize: 10, fontWeight: 700,
+                                letterSpacing: 1.5, textTransform: "uppercase",
+                                borderBottom: tab === t.id ? `2px solid ${COLORS.pink}` : "2px solid transparent",
+                                transition: "all 0.2s"
+                            }}>
+                                <span style={{ marginRight: 4 }}>{t.icon}</span>{t.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Content */}
+                    <div style={{ padding: "20px 20px 40px", maxWidth: 680, margin: "0 auto" }}>
+                        {tab === "wallet" && <WalletTab />}
+                        {tab === "orders" && <OrderBookTab />}
+                        {tab === "analysis" && <AnalysisTab />}
+                        {tab === "trivia" && <TriviaTab />}
+                        {tab === "news" && <NewsTab />}
+                        {tab === "learn" && <LearnTab />}
+                    </div>
+
+                    {/* Footer */}
+                    <div style={{
+                        borderTop: `1px solid ${COLORS.border}`, padding: "12px 24px",
+                        display: "flex", justifyContent: "space-between",
+                        color: "rgba(255,255,255,0.2)", fontSize: 9, letterSpacing: 1
+                    }}>
+                        <span>ＵＮＩＴ ０３ · Ｖ４Ｐ０Ｒ-Ｗ４Ｖ３-９Ｘ</span>
+                        <span>SIGNAL FADING... BUT THE VIBE LOOPS FOREVER...</span>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<VaporApp />);
+    </script>
+</body>
+</html>
