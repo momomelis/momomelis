@@ -80,12 +80,16 @@ The MOMO 2026 Intelligence System is a comprehensive decision-making dashboard t
 - All interactive elements keyboard-accessible
 
 ### Security
-- Subresource Integrity (SRI) hashes on all CDN scripts:
+- Subresource Integrity (SRI) hashes on pinned CDN scripts:
   - React 18.2.0
   - ReactDOM 18.2.0
   - Babel Standalone 7.23.2
-- CORS crossorigin="anonymous" attributes
+- CORS `crossorigin="anonymous"` attributes on all SRI-pinned scripts
 - No inline script execution, no eval()
+- **Note**: Tailwind CSS is loaded via `cdn.tailwindcss.com` (Tailwind Play CDN), which
+  dynamically generates CSS and does not support SRI hashes. This CDN is suitable for
+  development and prototyping. For production deployment, compile Tailwind locally or
+  use a self-hosted static build.
 
 ### Data Safety
 - Division-by-zero guards in all calculations
