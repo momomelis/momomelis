@@ -263,9 +263,10 @@ contract MomoCandieNFT is ERC721Enumerable, Ownable, ReentrancyGuard {
     function withdraw() external onlyOwner nonReentrant {
         uint256 balance = address(this).balance;
         require(balance > 0, "Nothing to withdraw");
-        (bool ok, ) = payable(owner()).call{value: balance}("");
+        address recipient = owner();
+        (bool ok, ) = payable(recipient).call{value: balance}("");
         require(ok, "Withdrawal failed");
-        emit Withdrawal(owner(), balance);
+        emit Withdrawal(recipient, balance);
     }
 
     function withdrawToDAO() external onlyOwner nonReentrant {
