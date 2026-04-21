@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Momo Candie Girls — Mint</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Space Mono', monospace;
+            background: linear-gradient(135deg, #0a0015 0%, #1a0030 50%, #2d0050 100%);
+            color: #fff;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        #particles { position: fixed; width: 100%; height: 100%; top: 0; left: 0; z-index: 0; pointer-events: none; }
+
+        .particle {
+            position: absolute;
+            width: 3px; height: 3px;
+            background: rgba(255, 182, 193, 0.5);
+            border-radius: 50%;
+            animation: float 20s infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0) translateX(0); opacity: 0; }
+            10% { opacity: 1; } 90% { opacity: 1; }
+            100% { transform: translateY(-100vh) translateX(50px); opacity: 0; }
+        }
+
+        .container { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 20px; }
+
+        /* ── Header ─────────────────────────────────────────────────────────── */
+        .header {
+            text-align: center; padding: 40px 20px;
+            background: rgba(255, 20, 147, 0.05);
+            border: 2px solid rgba(255, 20, 147, 0.3);
+            border-radius: 20px; margin-bottom: 32px;
+            backdrop-filter: blur(10px);
+        }
+
+        .logo {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.6em; font-weight: 900;
+            background: linear-gradient(45deg, #ff1493, #ff69b4, #ffc0cb);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+        .tagline { font-size: 1em; color: #ffc0cb; margin-top: 8px; }
+
+        .wallet-status {
+            display: inline-block; margin-top: 18px; padding: 10px 20px;
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid rgba(0, 255, 0, 0.4);
+            border-radius: 10px; font-size: 0.9em;
+        }
+
+        /* ── Phase banner ───────────────────────────────────────────────────── */
+        .phase-banner {
+            text-align: center; padding: 12px 20px;
+            border-radius: 12px; margin-bottom: 24px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.1em; font-weight: 700;
+        }
+        .phase-closed   { background: rgba(150, 0, 0, 0.25); border: 1px solid #cc0000; color: #ff6666; }
+        .phase-presale  { background: rgba(255, 165, 0, 0.15); border: 1px solid #ff8c00; color: #ffb347; }
+        .phase-public   { background: rgba(0, 180, 0, 0.15); border: 1px solid #00cc00; color: #66ff66; }
+        .phase-paused   { background: rgba(200, 0, 200, 0.15); border: 1px solid #cc00cc; color: #ff66ff; }
+
+        /* ── Mint card ──────────────────────────────────────────────────────── */
+        .mint-section {
+            background: rgba(255, 20, 147, 0.05);
+            border: 2px solid rgba(255, 20, 147, 0.3);
+            border-radius: 20px; padding: 36px;
+            backdrop-filter: blur(10px); margin-bottom: 32px;
+        }
+
+        .mint-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 16px; margin-bottom: 24px;
+        }
+
+        .stat-box {
+            background: rgba(0,0,0,0.35);
+            padding: 18px; border-radius: 10px;
+            border: 1px solid rgba(255, 20, 147, 0.3);
+            text-align: center;
+        }
+        .stat-label { color: #ffc0cb; font-size: 0.8em; margin-bottom: 4px; }
+        .stat-value { font-size: 1.8em; font-weight: bold; color: #ff69b4; }
+
+        /* ── Progress bar ───────────────────────────────────────────────────── */
+        .progress-wrap {
+            width: 100%; height: 28px; background: rgba(0,0,0,0.5);
+            border-radius: 14px; overflow: hidden; margin: 20px 0;
+            border: 1px solid rgba(255, 20, 147, 0.3);
+        }
+        .progress-bar {
+            height: 100%; min-width: 0%;
+            background: linear-gradient(90deg, #ff1493, #ff69b4);
+            transition: width 0.4s ease;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; font-size: 0.9em;
+        }
+
+        /* ── Quantity selector ──────────────────────────────────────────────── */
+        .quantity-selector {
+            display: flex; justify-content: center; align-items: center;
+            gap: 20px; margin: 28px 0;
+        }
+        .qty-btn {
+            background: rgba(255, 20, 147, 0.2);
+            border: 2px solid #ff1493; color: #fff;
+            font-size: 1.6em; width: 54px; height: 54px;
+            border-radius: 50%; cursor: pointer; transition: all 0.2s;
+        }
+        .qty-btn:hover:not(:disabled) { background: #ff1493; transform: scale(1.1); }
+        .qty-btn:disabled { opacity: 0.3; cursor: default; }
+        .qty-display {
+            font-size: 2.8em; font-weight: bold;
+            color: #ff69b4; min-width: 80px; text-align: center;
+        }
+
+        /* ── Price display ──────────────────────────────────────────────────── */
+        .price-display {
+            text-align: center; color: #ffc0cb;
+            font-size: 1em; margin-bottom: 20px;
+        }
+        .price-total { color: #fff; font-weight: bold; font-size: 1.3em; }
+
+        /* ── Proof input (presale) ───────────────────────────────────────────── */
+        .proof-input-wrap {
+            display: none; margin: 16px 0;
+            background: rgba(255, 140, 0, 0.08);
+            border: 1px solid rgba(255, 140, 0, 0.4);
+            border-radius: 10px; padding: 16px;
+        }
+        .proof-input-wrap label { color: #ffb347; font-size: 0.85em; display: block; margin-bottom: 8px; }
+        .proof-input-wrap textarea {
+            width: 100%; height: 80px; resize: vertical;
+            background: rgba(0,0,0,0.4); border: 1px solid #ff8c00;
+            border-radius: 6px; color: #fff; padding: 8px;
+            font-family: 'Space Mono', monospace; font-size: 0.75em;
+        }
+        .proof-hint { color: #888; font-size: 0.75em; margin-top: 6px; }
+
+        /* ── Buttons ────────────────────────────────────────────────────────── */
+        .btn-primary {
+            background: linear-gradient(45deg, #ff1493, #ff69b4);
+            border: none; color: white;
+            padding: 18px 56px; font-size: 1.3em; font-weight: bold;
+            border-radius: 50px; cursor: pointer; transition: all 0.3s;
+            font-family: 'Orbitron', sans-serif; text-transform: uppercase;
+            box-shadow: 0 0 20px rgba(255, 20, 147, 0.5);
+            display: block; margin: 0 auto;
+        }
+        .btn-primary:hover:not(:disabled) { transform: scale(1.05); box-shadow: 0 0 40px rgba(255, 20, 147, 0.8); }
+        .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+        .btn-connect {
+            background: linear-gradient(45deg, #00cc00, #00ff00);
+            border: none; color: #000;
+            padding: 14px 36px; font-size: 1.1em; font-weight: bold;
+            border-radius: 50px; cursor: pointer; transition: all 0.3s;
+            font-family: 'Orbitron', sans-serif;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.4); margin-top: 16px;
+        }
+        .btn-connect:hover { transform: scale(1.05); box-shadow: 0 0 40px rgba(0, 255, 0, 0.7); }
+
+        /* ── Status message ─────────────────────────────────────────────────── */
+        .status-msg {
+            text-align: center; padding: 12px 20px;
+            border-radius: 10px; margin-top: 16px;
+            font-size: 0.9em; display: none;
+        }
+        .status-pending { background: rgba(255, 165, 0, 0.15); border: 1px solid #ff8c00; color: #ffb347; }
+        .status-success { background: rgba(0, 200, 0, 0.15); border: 1px solid #00cc00; color: #66ff66; }
+        .status-error   { background: rgba(220, 0, 0, 0.15); border: 1px solid #cc0000; color: #ff6666; }
+
+        /* ── Leaderboard ────────────────────────────────────────────────────── */
+        .leaderboard {
+            background: rgba(255, 20, 147, 0.05);
+            border: 2px solid rgba(255, 20, 147, 0.3);
+            border-radius: 20px; padding: 36px;
+            backdrop-filter: blur(10px);
+        }
+        .leaderboard-title {
+            font-family: 'Orbitron', sans-serif; font-size: 1.6em;
+            text-align: center; margin-bottom: 24px; color: #ff69b4;
+        }
+        .leaderboard-entry {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 16px; margin: 8px 0;
+            background: rgba(0,0,0,0.3); border-radius: 10px;
+            border: 1px solid rgba(255, 20, 147, 0.3); transition: all 0.2s;
+        }
+        .leaderboard-entry:hover { border-color: #ff1493; transform: translateX(4px); }
+        .rank  { font-size: 1.3em; font-weight: bold; color: #ff69b4; min-width: 44px; }
+        .addr  { flex: 1; font-family: 'Space Mono', monospace; color: #ffc0cb; font-size: 0.9em; }
+        .held  { font-weight: bold; color: #fff; }
+
+        /* ── Reveal modal ───────────────────────────────────────────────────── */
+        .reveal-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.92);
+            display: none; justify-content: center; align-items: center;
+            z-index: 1000;
+        }
+        .reveal-card {
+            text-align: center; max-width: 480px; padding: 40px;
+            background: linear-gradient(135deg, #1a0030, #2d0050);
+            border: 3px solid #ff1493; border-radius: 20px;
+            box-shadow: 0 0 50px rgba(255, 20, 147, 0.5);
+        }
+        .reveal-title { font-family: 'Orbitron', sans-serif; font-size: 2em; margin-bottom: 16px; color: #ff69b4; }
+        .reveal-icon {
+            width: 200px; height: 200px; margin: 20px auto;
+            background: linear-gradient(45deg, #ff1493, #ff69b4);
+            border-radius: 20px; display: flex; align-items: center;
+            justify-content: center; font-size: 6em;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+        .btn-close-reveal {
+            margin-top: 24px; background: rgba(255,20,147,0.3);
+            border: 2px solid #ff1493; color: #fff;
+            padding: 12px 36px; border-radius: 50px; cursor: pointer;
+            font-family: 'Orbitron', sans-serif; font-size: 1em;
+        }
+
+        @media (max-width: 600px) {
+            .logo { font-size: 1.8em; }
+            .mint-section { padding: 20px; }
+            .qty-display { font-size: 2em; }
+            .btn-primary { font-size: 1.1em; padding: 14px 36px; }
+        }
+    </style>
+</head>
+<body>
+<div id="particles"></div>
+
+<div class="container">
+
+    <!-- Header -->
+    <div class="header">
+        <div class="logo">🍓 MOMO CANDIE GIRLS</div>
+        <div class="tagline">Summon Your Cyberpunk Period Oracle Companion</div>
+        <div id="walletSection">
+            <button class="btn-connect" onclick="connectWallet()">Connect Wallet</button>
+        </div>
+    </div>
+
+    <!-- Phase banner -->
+    <div id="phaseBanner" class="phase-banner phase-closed">⏸ Sale Not Active</div>
+
+    <!-- Mint card -->
+    <div class="mint-section">
+        <div class="mint-stats">
+            <div class="stat-box">
+                <div class="stat-label">Minted</div>
+                <div class="stat-value" id="statMinted">—</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Max Supply</div>
+                <div class="stat-value">3,333</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Price</div>
+                <div class="stat-value" id="statPrice">—</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Your NFTs</div>
+                <div class="stat-value" id="statBalance">—</div>
+            </div>
+        </div>
+
+        <div class="progress-wrap">
+            <div class="progress-bar" id="progressBar" style="width:0%">0%</div>
+        </div>
+
+        <!-- Presale proof input -->
+        <div class="proof-input-wrap" id="proofWrap">
+            <label>Whitelist Proof (paste your JSON array of bytes32 strings)</label>
+            <textarea id="proofInput" placeholder='["0xabc...", "0xdef..."]'></textarea>
+            <div class="proof-hint">Your proof is generated from the whitelist Merkle tree. Contact the team if you need yours.</div>
+        </div>
+
+        <div class="quantity-selector">
+            <button class="qty-btn" id="btnMinus" onclick="changeQty(-1)">−</button>
+            <div class="qty-display" id="qtyDisplay">1</div>
+            <button class="qty-btn" id="btnPlus" onclick="changeQty(1)">+</button>
+        </div>
+
+        <div class="price-display" id="priceDisplay"></div>
+
+        <button class="btn-primary" id="mintBtn" onclick="mint()" disabled>
+            Connect Wallet to Mint
+        </button>
+
+        <div class="status-msg" id="statusMsg"></div>
+    </div>
+
+    <!-- Leaderboard (static display — requires an indexer for live on-chain data) -->
+    <div class="leaderboard">
+        <div class="leaderboard-title">🏆 Top Collectors</div>
+        <div id="leaderboardList"></div>
+    </div>
+
+</div>
+
+<!-- Reveal modal -->
+<div class="reveal-overlay" id="revealOverlay">
+    <div class="reveal-card">
+        <div class="reveal-title">✨ Summoning Complete!</div>
+        <div class="reveal-icon">🍓</div>
+        <p style="color:#ffc0cb; margin:16px 0;">
+            <span id="revealMsg">Your Momo Candie Girl has arrived!</span><br>
+            <span style="font-size:0.85em; color:#ff69b4; margin-top:8px; display:block;" id="revealTxLink"></span>
+        </p>
+        <button class="btn-close-reveal" onclick="closeReveal()">Access Your Oracle</button>
+    </div>
+</div>
+
+<!-- ethers v6 UMD build -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+<script>
+// ── Config ──────────────────────────────────────────────────────────────────
+// Set this to the deployed contract address after running deploy.js
+const CONTRACT_ADDRESS = "REPLACE_WITH_DEPLOYED_ADDRESS";
+
+const SEPOLIA_CHAIN_ID = 11155111n;
+
+// Minimal ABI — only the functions this page needs
+const ABI = [
+    "function totalSupply() view returns (uint256)",
+    "function balanceOf(address owner) view returns (uint256)",
+    "function salePhase() view returns (uint8)",
+    "function presalePrice() view returns (uint256)",
+    "function publicPrice() view returns (uint256)",
+    "function presaleMintedCount(address) view returns (uint256)",
+    "function publicMintedCount(address) view returns (uint256)",
+    "function paused() view returns (bool)",
+    "function presaleMint(uint256 quantity, bytes32[] calldata proof) payable",
+    "function publicMint(uint256 quantity) payable",
+];
+
+// Matches the contract enum: Phase { Closed=0, Presale=1, Public=2 }
+const PHASE = { CLOSED: 0, PRESALE: 1, PUBLIC: 2 };
+const MAX_SUPPLY     = 3333n;
+const MAX_PUBLIC     = 3n;   // MAX_PER_WALLET
+const MAX_PRESALE    = 2n;   // MAX_PRESALE_MINT
+
+// ── State ────────────────────────────────────────────────────────────────────
+let provider   = null;
+let signer     = null;
+let contract   = null;
+let userAddr   = null;
+let quantity   = 1n;
+let phaseState = PHASE.CLOSED;
+let unitPrice  = 0n;  // wei
+
+// ── Particles ────────────────────────────────────────────────────────────────
+(function createParticles() {
+    const wrap = document.getElementById('particles');
+    for (let i = 0; i < 50; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        p.style.left = (Math.random() * 100) + '%';
+        p.style.animationDelay = (Math.random() * 20) + 's';
+        p.style.animationDuration = (15 + Math.random() * 10) + 's';
+        wrap.appendChild(p);
+    }
+})();
+
+// ── Leaderboard (static — live data requires an indexer) ─────────────────────
+(function renderLeaderboard() {
+    const entries = [
+        { address: '0x742d...35A4', amount: 3 },
+        { address: '0x8B3f...92C1', amount: 3 },
+        { address: '0x1A2c...D8F3', amount: 2 },
+        { address: '0x9E4a...B7A2', amount: 2 },
+        { address: '0x3C8d...F1E9', amount: 1 },
+    ];
+    document.getElementById('leaderboardList').innerHTML = entries
+        .map((e, i) => `
+            <div class="leaderboard-entry">
+                <div class="rank">#${i + 1}</div>
+                <div class="addr">${e.address}</div>
+                <div class="held">${e.amount} NFTs</div>
+            </div>`)
+        .join('');
+})();
+
+// ── Wallet connection ────────────────────────────────────────────────────────
+async function connectWallet() {
+    if (!window.ethereum) {
+        showStatus('MetaMask not detected. Please install it to mint.', 'error');
+        return;
+    }
+
+    try {
+        provider = new ethers.BrowserProvider(window.ethereum);
+        await provider.send('eth_requestAccounts', []);
+        signer = await provider.getSigner();
+        userAddr = await signer.getAddress();
+
+        // Network check — must be Sepolia
+        const { chainId } = await provider.getNetwork();
+        if (chainId !== SEPOLIA_CHAIN_ID) {
+            try {
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: '0x' + SEPOLIA_CHAIN_ID.toString(16) }],
+                });
+                provider = new ethers.BrowserProvider(window.ethereum);
+                signer   = await provider.getSigner();
+            } catch {
+                showStatus('Please switch to Sepolia testnet.', 'error');
+                return;
+            }
+        }
+
+        contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+
+        updateWalletUI();
+        await refreshStats();
+
+        // Re-fetch whenever the user switches accounts or network
+        window.ethereum.on('accountsChanged', () => location.reload());
+        window.ethereum.on('chainChanged',    () => location.reload());
+
+    } catch (err) {
+        showStatus('Wallet connection failed: ' + (err.reason ?? err.message), 'error');
+    }
+}
+
+function updateWalletUI() {
+    const short = userAddr.slice(0, 6) + '...' + userAddr.slice(-4);
+    document.getElementById('walletSection').innerHTML =
+        `<div class="wallet-status">🟢 Connected: ${short}</div>`;
+}
+
+// ── Contract reads ───────────────────────────────────────────────────────────
+async function refreshStats() {
+    if (!contract) return;
+
+    try {
+        const [total, phase, isPaused, presaleP, publicP, userBal] =
+            await Promise.all([
+                contract.totalSupply(),
+                contract.salePhase(),
+                contract.paused(),
+                contract.presalePrice(),
+                contract.publicPrice(),
+                contract.balanceOf(userAddr),
+            ]);
+
+        phaseState = Number(phase);
+        const isMintable = !isPaused && phaseState !== PHASE.CLOSED;
+
+        // Supply stats
+        document.getElementById('statMinted').textContent  = total.toString();
+        document.getElementById('statBalance').textContent = userBal.toString();
+
+        // Progress bar
+        const pct = Number((total * 100n) / MAX_SUPPLY);
+        const bar = document.getElementById('progressBar');
+        bar.style.width = pct + '%';
+        bar.textContent = pct + '%';
+
+        // Price per unit for current phase
+        unitPrice = phaseState === PHASE.PRESALE ? presaleP : publicP;
+        const priceEth = ethers.formatEther(unitPrice);
+        document.getElementById('statPrice').textContent =
+            phaseState === PHASE.PRESALE ? `${priceEth} ETH` :
+            phaseState === PHASE.PUBLIC   ? `${priceEth} ETH` : '—';
+
+        // Phase banner
+        updatePhaseBanner(isPaused, phaseState);
+
+        // Quantity cap and proof visibility
+        const maxQty = phaseState === PHASE.PRESALE ? MAX_PRESALE : MAX_PUBLIC;
+        if (quantity > maxQty) quantity = maxQty;
+        renderQty(maxQty);
+
+        // Presale proof input
+        document.getElementById('proofWrap').style.display =
+            phaseState === PHASE.PRESALE ? 'block' : 'none';
+
+        // Mint button
+        const mintBtn = document.getElementById('mintBtn');
+        if (isPaused) {
+            mintBtn.textContent = 'Contract Paused';
+            mintBtn.disabled = true;
+        } else if (phaseState === PHASE.CLOSED) {
+            mintBtn.textContent = 'Sale Not Active';
+            mintBtn.disabled = true;
+        } else {
+            mintBtn.textContent = phaseState === PHASE.PRESALE ? 'Presale Mint' : 'Mint Now';
+            mintBtn.disabled = false;
+        }
+
+        renderPriceDisplay();
+
+    } catch (err) {
+        showStatus('Failed to read contract: ' + (err.reason ?? err.message), 'error');
+    }
+}
+
+function updatePhaseBanner(isPaused, phase) {
+    const el = document.getElementById('phaseBanner');
+    if (isPaused) {
+        el.className = 'phase-banner phase-paused';
+        el.textContent = '⚠️ Contract Paused — Minting temporarily halted';
+        return;
+    }
+    switch (phase) {
+        case PHASE.CLOSED:
+            el.className = 'phase-banner phase-closed';
+            el.textContent = '⏸ Sale Not Active';
+            break;
+        case PHASE.PRESALE:
+            el.className = 'phase-banner phase-presale';
+            el.textContent = '🔒 Presale — Whitelisted wallets only (max 2 per wallet)';
+            break;
+        case PHASE.PUBLIC:
+            el.className = 'phase-banner phase-public';
+            el.textContent = '🟢 Public Sale — Open to all (max 3 per wallet)';
+            break;
+    }
+}
+
+function renderQty(maxQty) {
+    document.getElementById('qtyDisplay').textContent = quantity.toString();
+    document.getElementById('btnMinus').disabled = quantity <= 1n;
+    document.getElementById('btnPlus').disabled  = quantity >= maxQty;
+}
+
+function renderPriceDisplay() {
+    if (phaseState === PHASE.CLOSED || unitPrice === 0n) {
+        document.getElementById('priceDisplay').innerHTML = '';
+        return;
+    }
+    const total = ethers.formatEther(unitPrice * quantity);
+    document.getElementById('priceDisplay').innerHTML =
+        `${ethers.formatEther(unitPrice)} ETH × ${quantity} = <span class="price-total">${total} ETH</span>`;
+}
+
+// ── Quantity selector ────────────────────────────────────────────────────────
+function changeQty(delta) {
+    const maxQty = phaseState === PHASE.PRESALE ? MAX_PRESALE : MAX_PUBLIC;
+    const next = quantity + BigInt(delta);
+    if (next >= 1n && next <= maxQty) {
+        quantity = next;
+        renderQty(maxQty);
+        renderPriceDisplay();
+    }
+}
+
+// ── Mint ─────────────────────────────────────────────────────────────────────
+async function mint() {
+    if (!contract || !userAddr) {
+        showStatus('Wallet not connected.', 'error');
+        return;
+    }
+
+    const mintBtn = document.getElementById('mintBtn');
+    mintBtn.disabled = true;
+    mintBtn.textContent = 'Confirming…';
+    clearStatus();
+
+    try {
+        const value = unitPrice * quantity;
+        let tx;
+
+        if (phaseState === PHASE.PRESALE) {
+            const raw = document.getElementById('proofInput').value.trim();
+            let proof;
+            try {
+                proof = JSON.parse(raw);
+                if (!Array.isArray(proof)) throw new Error();
+            } catch {
+                showStatus('Invalid proof. Paste your whitelist proof as a JSON array.', 'error');
+                mintBtn.disabled = false;
+                mintBtn.textContent = 'Presale Mint';
+                return;
+            }
+            tx = await contract.presaleMint(quantity, proof, { value });
+
+        } else if (phaseState === PHASE.PUBLIC) {
+            tx = await contract.publicMint(quantity, { value });
+
+        } else {
+            showStatus('Sale is not active.', 'error');
+            mintBtn.disabled = false;
+            return;
+        }
+
+        showStatus('Transaction submitted — waiting for confirmation…', 'pending');
+        mintBtn.textContent = 'Minting…';
+
+        const receipt = await tx.wait();
+        showReveal(receipt.hash);
+        await refreshStats();
+
+    } catch (err) {
+        const msg = err.reason ?? err.shortMessage ?? err.message ?? 'Transaction failed.';
+        showStatus('Error: ' + msg, 'error');
+        mintBtn.disabled = false;
+        mintBtn.textContent = phaseState === PHASE.PRESALE ? 'Presale Mint' : 'Mint Now';
+    }
+}
+
+// ── Reveal modal ─────────────────────────────────────────────────────────────
+const REVEAL_MSGS = [
+    'Your oracle companion awaits!',
+    'The ritual is complete!',
+    'Welcome to the sisterhood!',
+    'Your period power is activated!',
+    'Strawberry magic unlocked!',
+];
+
+function showReveal(txHash) {
+    document.getElementById('revealMsg').textContent =
+        REVEAL_MSGS[Math.floor(Math.random() * REVEAL_MSGS.length)];
+    document.getElementById('revealTxLink').innerHTML =
+        `<a href="https://sepolia.etherscan.io/tx/${txHash}" target="_blank" rel="noopener"
+            style="color:#ff69b4;">View on Etherscan ↗</a>`;
+    document.getElementById('revealOverlay').style.display = 'flex';
+    clearStatus();
+}
+
+function closeReveal() {
+    document.getElementById('revealOverlay').style.display = 'none';
+}
+
+// ── Status messages ───────────────────────────────────────────────────────────
+function showStatus(text, type) {
+    const el = document.getElementById('statusMsg');
+    el.className = `status-msg status-${type}`;
+    el.textContent = text;
+    el.style.display = 'block';
+}
+function clearStatus() {
+    document.getElementById('statusMsg').style.display = 'none';
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+    // Allow read-only stats refresh if MetaMask is already connected
+    if (window.ethereum && window.ethereum.selectedAddress) {
+        connectWallet();
+    }
+});
+</script>
+</body>
+</html>
