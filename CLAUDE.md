@@ -13,6 +13,7 @@ AI assistant context for the **momomelis** repository. Read this before modifyin
 - Reserve minting for team/DAO/giveaways
 - On-chain metadata reveal
 - DAO governance handoff
+- Emergency pause (blocks minting and transfers)
 
 **Stack**: Solidity 0.8.26 · Hardhat 2.28.6 · OpenZeppelin 5.4.0 · ethers 6.16.0 · Chai/Mocha · TypeChain
 
@@ -23,7 +24,7 @@ AI assistant context for the **momomelis** repository. Read this before modifyin
 ```
 momomelis/
 ├── contracts/
-│   └── MomoCandieNFT.sol       # Main ERC-721 contract (290 lines)
+│   └── MomoCandieNFT.sol       # Main ERC-721 contract (~370 lines)
 ├── scripts/
 │   └── deploy.js               # Deployment script with Merkle tree generation
 ├── test/
@@ -51,6 +52,7 @@ momomelis/
 MomoCandieNFT
   ├── ERC721Enumerable (OpenZeppelin)
   ├── Ownable (OpenZeppelin)
+  ├── Pausable (OpenZeppelin)
   └── ReentrancyGuard (OpenZeppelin)
 ```
 
@@ -87,15 +89,20 @@ mapping(address => uint256) public publicMintedCount;
 
 ### Minting Functions
 
-- **`presaleMint(quantity, proof)`** — payable, `callerIsUser`, `nonReentrant`. Requires `Phase.Presale` and valid Merkle proof. Cap: `MAX_PRESALE_MINT` per wallet.
-- **`publicMint(quantity)`** — payable, `callerIsUser`, `nonReentrant`. Requires `Phase.Public`. Cap: `MAX_PER_WALLET` per wallet lifetime.
-- **`reserveMint(to, quantity)`** — `onlyOwner`. Draws from `RESERVE_SUPPLY`. Does not affect public allocation until reserve is partially used.
+- **`presaleMint(quantity, proof)`** — payable, `callerIsUser`, `nonReentrant`, `whenNotPaused`. Requires `Phase.Presale` and valid Merkle proof. Cap: `MAX_PRESALE_MINT` per wallet.
+- **`publicMint(quantity)`** — payable, `callerIsUser`, `nonReentrant`, `whenNotPaused`. Requires `Phase.Public`. Cap: `MAX_PER_WALLET` per wallet lifetime.
+- **`reserveMint(to, quantity)`** — `onlyOwner`, `whenNotPaused`. Draws from `RESERVE_SUPPLY`. Does not affect public allocation until reserve is partially used.
 
 ### Supply Accounting
 
-Available public supply = `MAX_SUPPLY - (RESERVE_SUPPLY - _reserveMinted)`
+The internal `_availableSupply()` helper encodes the cap formula:
 
-As reserve tokens are minted, they free up public supply slots. This is the formula used in both `presaleMint` and `publicMint` supply checks.
+```
+cap    = MAX_SUPPLY − (RESERVE_SUPPLY − _reserveMinted)
+return = cap − totalSupply()   (saturates at 0, never reverts)
+```
+
+Both `presaleMint` and `publicMint` call `_availableSupply()` for their supply check. The function saturates at 0 rather than reverting on underflow, so callers always get a usable value. `remainingSupply()` (public view) delegates to the same helper — it is no longer a naive `MAX_SUPPLY - totalSupply()`.
 
 ### Token IDs
 
@@ -121,28 +128,33 @@ Prevents contracts from calling minting functions directly.
 | Event | Emitted When |
 |---|---|
 | `PhaseChanged(Phase)` | Phase is changed via `setPhase`, `openPresale`, `toggleSale`, `closeSale` |
-| `Revealed(string)` | Metadata is revealed |
-| `DAOHandoff(address, address)` | Ownership transferred to DAO |
-| `MerkleRootUpdated(bytes32)` | Merkle root updated |
-| `Withdrawal(address, uint256)` | ETH withdrawn (emitted after successful transfer) |
+| `Revealed(string)` | Metadata is revealed via `reveal()` |
+| `DAOHandoff(address, address)` | Ownership transferred to DAO via `handoffToDAO()` |
+| `MerkleRootUpdated(bytes32)` | Merkle root updated via `setMerkleRoot()` |
+| `Withdrawal(address, uint256)` | ETH withdrawn via `withdraw()` or `withdrawToDAO()` |
+| `UnrevealedURIUpdated(string)` | Unrevealed URI changed via `setUnrevealedURI()` |
+| `BaseURIUpdated(string)` | Base URI changed via `setBaseURI()` |
+| `PricesUpdated(uint256, uint256)` | Prices updated via `setPrices()` |
+| `DAOMultisigUpdated(address)` | DAO multisig address changed via `setDAOMultisig()` |
 
 ### Admin Functions (all `onlyOwner`)
 
 - `setPhase(Phase)` / `openPresale()` / `toggleSale()` / `closeSale()` — phase control
+- `pause()` / `unpause()` — emergency stop; blocks all minting and token transfers via `_update` override
 - `setMerkleRoot(bytes32)` — update whitelist root
 - `reveal(string)` — one-time reveal with URI
 - `setBaseURI(string)` — update base URI post-reveal
 - `setUnrevealedURI(string)` — update placeholder URI
 - `setPrices(uint256, uint256)` — update presale/public prices
 - `setDAOMultisig(address)` — update DAO address
-- `handoffToDAO()` — irrevocably transfer ownership to `daoMultisig`
-- `withdraw()` — send ETH balance to owner
+- `handoffToDAO()` — irrevocably transfer ownership to `daoMultisig`; re-validates non-zero address at call time even though it's validated on set
+- `withdraw()` — send ETH balance to owner (caches `owner()` to avoid double SLOAD)
 - `withdrawToDAO()` — send ETH balance to DAO multisig
 
 ### View Functions
 
 - `reserveMinted()` — returns `_reserveMinted` (count of reserve tokens minted so far)
-- `remainingSupply()` — returns `MAX_SUPPLY - totalSupply()` (note: does not account for reserved allocation)
+- `remainingSupply()` — delegates to `_availableSupply()`; reflects the actual public/presale cap, accounting for the reserve allocation
 - `tokenURI(tokenId)` — returns `unrevealedURI` or `_baseTokenURI + tokenId + ".json"` depending on `revealed`
 
 ---
@@ -317,10 +329,10 @@ Tests use Hardhat's built-in local network with `ethers` fixtures. The test file
 2. **Do not change token ID logic** — IDs are 1-indexed and sequential; tests assert specific IDs.
 3. **`reveal()` is one-way** — once called, `revealed` cannot be reset. Any metadata update must use `setBaseURI()`.
 4. **`handoffToDAO()` is irreversible** — the original owner loses all admin rights. Never call this in tests without a fresh fixture.
-5. **Supply formula** — both `presaleMint` and `publicMint` use `MAX_SUPPLY - (RESERVE_SUPPLY - _reserveMinted)` as the effective cap. This must remain consistent between the two functions.
-6. **`callerIsUser`** — EOA-only restriction on mint functions. Do not remove; it is security-critical.
+5. **Supply formula** — both `presaleMint` and `publicMint` route through `_availableSupply()`. Any change to the cap formula must go through that single function; do not duplicate it inline.
+6. **`callerIsUser`** — EOA-only restriction on mint functions. Do not remove; it is security-critical. If account-abstraction wallet support is ever needed, replace with an allowlist rather than removing the guard entirely.
 7. **Prices default to** `0.03 ETH` (presale) and `0.05 ETH` (public). Tests rely on these defaults.
-8. **`remainingSupply()` is naive** — it returns `MAX_SUPPLY - totalSupply()` without accounting for the reserved allocation. It is a display helper only; minting logic uses the full formula.
+8. **`pause()` blocks `_update`** — the override halts all mints, transfers, and burns while paused. Tests that call mint functions must not be run against a paused contract.
 
 ---
 
@@ -353,3 +365,21 @@ typechain-types/
 | `test/**/*.js` | momomelis |
 
 Draft PRs skip auto-assignment. Merge only after CI tests pass.
+
+---
+
+## Issue & Feature Status Labels
+
+Use these labels on GitHub issues and project board cards to communicate lifecycle state clearly:
+
+| Label | Meaning |
+|---|---|
+| `exploring` | Idea under consideration — no commitment to build |
+| `in design` | Decided to build; figuring out HOW (architecture, spec) |
+| `preview` | Shipped publicly but no SLA yet; ~1–2 quarters from GA |
+| `ga` | Live for everyone — SLA and support active |
+| `shipped` | Closed; linked to a Changelog post |
+
+**Flow**: `exploring` → `in design` → `preview` → `ga` → `shipped`
+
+Issues stay in `exploring` until a decision is made. `shipped` is a terminal state — close the issue and link the Changelog entry in the closing comment.
