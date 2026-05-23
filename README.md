@@ -68,7 +68,7 @@ Multi-chain deployment across Ethereum and Solana for accessibility, gas efficie
 ## Protocol Specifications
 
 **Strawberry Protocol v1**
-- ERC-5192 (soulbound identity) + ERC-1155 (ritual NFT collectibles)
+- ERC-5192 (soulbound identity) + ERC-721 (ritual NFT collectibles)
 - Zero-knowledge proofs for optional anonymous health analytics
 - DAO-controlled protocol upgrades via governance token voting
 
